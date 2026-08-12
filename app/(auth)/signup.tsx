@@ -1,0 +1,68 @@
+import React from 'react';
+import { View, Text, StyleSheet, KeyboardAvoidingView, Platform, ScrollView, Pressable } from 'react-native';
+import { useRouter, Link } from 'expo-router';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
+import { useStore } from '../../src/store/useStore';
+import { Button, Field } from '../../src/components/ui';
+import { colors, font, spacing } from '../../src/theme';
+
+export default function Signup() {
+  const router = useRouter();
+  const signup = useStore((s) => s.signup);
+  const [name, setName] = React.useState('');
+  const [email, setEmail] = React.useState('');
+  const [password, setPassword] = React.useState('');
+
+  const onSignup = () => {
+    signup(name.trim(), email.trim());
+    router.replace('/(app)/(tabs)');
+  };
+
+  return (
+    <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
+        <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
+          <Link href="/(auth)/login" asChild>
+            <Pressable hitSlop={10} style={styles.back}>
+              <Ionicons name="chevron-back" size={22} color={colors.text} />
+              <Text style={styles.backText}>Back</Text>
+            </Pressable>
+          </Link>
+
+          <Text style={styles.title}>Create your account</Text>
+          <Text style={styles.subtitle}>Start planning your next adventure.</Text>
+
+          <View style={{ marginTop: spacing.xl }}>
+            <Field label="Full name" icon="person-outline" placeholder="Jane Traveller" value={name} onChangeText={setName} />
+            <Field label="Email" icon="mail-outline" placeholder="you@example.com" keyboardType="email-address" autoCapitalize="none" value={email} onChangeText={setEmail} />
+            <Field label="Password" icon="lock-closed-outline" placeholder="Create a password" secureTextEntry value={password} onChangeText={setPassword} />
+
+            <Button label="Sign up" onPress={onSignup} full style={{ marginTop: spacing.sm }} />
+
+            <View style={styles.footer}>
+              <Text style={styles.footerText}>Already have an account? </Text>
+              <Link href="/(auth)/login" asChild>
+                <Pressable>
+                  <Text style={styles.link}>Log in</Text>
+                </Pressable>
+              </Link>
+            </View>
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
+  );
+}
+
+const styles = StyleSheet.create({
+  safe: { flex: 1, backgroundColor: colors.bg },
+  scroll: { flexGrow: 1, padding: spacing.xl, justifyContent: 'center' },
+  back: { flexDirection: 'row', alignItems: 'center', position: 'absolute', top: spacing.lg, left: spacing.lg },
+  backText: { fontSize: font.size.md, color: colors.text, fontWeight: font.weight.medium },
+  title: { fontSize: font.size.xxl, fontWeight: font.weight.bold, color: colors.text },
+  subtitle: { fontSize: font.size.md, color: colors.textMuted, marginTop: 6 },
+  footer: { flexDirection: 'row', justifyContent: 'center', marginTop: spacing.xl },
+  footerText: { color: colors.textMuted, fontSize: font.size.sm },
+  link: { color: colors.primary, fontWeight: font.weight.semibold, fontSize: font.size.sm },
+});
