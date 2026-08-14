@@ -45,6 +45,14 @@ export async function listExpenses(tripId: string): Promise<Expense[]> {
   return (data as ExpenseRow[]).map(rowToExpense);
 }
 
+// Every expense across all trips the user belongs to (RLS-scoped). Used to
+// show per-trip "spent" on the trips home without a query per card.
+export async function listAllExpenses(): Promise<Expense[]> {
+  const { data, error } = await supabase.from('expenses').select('*, expense_splits(member_id)');
+  if (error) throw error;
+  return (data as ExpenseRow[]).map(rowToExpense);
+}
+
 export async function addExpense(input: Omit<Expense, 'id'>): Promise<Expense> {
   const { data, error } = await supabase
     .from('expenses')

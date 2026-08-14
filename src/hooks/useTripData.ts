@@ -18,6 +18,7 @@ export const keys = {
   wallets: (tripId: string) => ['wallets', tripId] as const,
   settlements: (tripId: string) => ['settlements', tripId] as const,
   members: (tripId: string) => ['members', tripId] as const,
+  allExpenses: ['expenses', 'all'] as const,
   itinerary: (tripId: string) => ['itinerary', tripId] as const,
   todos: (tripId: string) => ['todos', tripId] as const,
   flights: (tripId: string) => ['flights', tripId] as const,
@@ -31,6 +32,9 @@ export function useBudgetCategories(tripId: string) {
 }
 export function useExpenses(tripId: string) {
   return useQuery({ queryKey: keys.expenses(tripId), queryFn: () => expensesRepo.listExpenses(tripId), enabled: !!tripId });
+}
+export function useAllExpenses() {
+  return useQuery({ queryKey: keys.allExpenses, queryFn: () => expensesRepo.listAllExpenses() });
 }
 export function useCashWallets(tripId: string) {
   return useQuery({ queryKey: keys.wallets(tripId), queryFn: () => cash.listWallets(tripId), enabled: !!tripId });
@@ -61,14 +65,20 @@ export function useAddExpense(tripId: string) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (input: Omit<Expense, 'id'>) => expensesRepo.addExpense(input),
-    onSuccess: () => qc.invalidateQueries({ queryKey: keys.expenses(tripId) }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: keys.expenses(tripId) });
+      qc.invalidateQueries({ queryKey: keys.allExpenses });
+    },
   });
 }
 export function useDeleteExpense(tripId: string) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => expensesRepo.deleteExpense(id),
-    onSuccess: () => qc.invalidateQueries({ queryKey: keys.expenses(tripId) }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: keys.expenses(tripId) });
+      qc.invalidateQueries({ queryKey: keys.allExpenses });
+    },
   });
 }
 export function useLoadCash(tripId: string) {
@@ -78,6 +88,7 @@ export function useLoadCash(tripId: string) {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: keys.wallets(tripId) });
       qc.invalidateQueries({ queryKey: keys.expenses(tripId) });
+      qc.invalidateQueries({ queryKey: keys.allExpenses });
     },
   });
 }
@@ -145,6 +156,7 @@ export function useDeleteTodo(tripId: string) {
 // itinerary entry, so refresh all four caches on success.
 function invalidateBookingLinked(qc: ReturnType<typeof useQueryClient>, tripId: string) {
   qc.invalidateQueries({ queryKey: keys.expenses(tripId) });
+  qc.invalidateQueries({ queryKey: keys.allExpenses });
   qc.invalidateQueries({ queryKey: keys.documents(tripId) });
   qc.invalidateQueries({ queryKey: keys.itinerary(tripId) });
 }

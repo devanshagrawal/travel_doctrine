@@ -4,6 +4,7 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useStore } from '../../../src/store/useStore';
 import { useTrips } from '../../../src/hooks/useTrips';
+import { useAllExpenses } from '../../../src/hooks/useTripData';
 import { useTheme } from '../../../src/theme/useTheme';
 import { Masthead } from '../../../src/components/Masthead';
 import { TripCover } from '../../../src/components/TripCover';
@@ -25,7 +26,7 @@ export default function TripsHome() {
   const router = useRouter();
   const { colors, spacing, shadow } = useTheme();
   const user = useStore((s) => s.user);
-  const expenses = useStore((s) => s.expenses);
+  const { data: expenses = [] } = useAllExpenses();
   const { data: trips = [], isLoading, error } = useTrips();
 
   const upcoming = trips.filter((t) => !isTripDone(t));
