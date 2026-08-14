@@ -3,14 +3,15 @@ import { View, Text, StyleSheet, ScrollView, Pressable, Modal, Image } from 'rea
 import { useLocalSearchParams } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 import { Ionicons } from '@expo/vector-icons';
-import { useStore } from '../../../../src/store/useStore';
+import { useTrip } from '../../../../src/hooks/useTrips';
+import { useHotels, useBudgetCategories, useSaveHotel, useDeleteHotel, useAttachHotelProof } from '../../../../src/hooks/useTripData';
 import { Button, Field, EmptyState, Pill } from '../../../../src/components/ui';
 import { font, radius, shadow, spacing, Palette } from '../../../../src/theme';
 import { useTheme } from '../../../../src/theme/useTheme';
 import { fmtDate, nights } from '../../../../src/lib/format';
 import { formatMoney } from '../../../../src/lib/currency';
 import { findCategoryId } from '../../../../src/lib/selectors';
-import { confirmAction } from '../../../../src/lib/confirm';
+import { confirmAction, notify } from '../../../../src/lib/confirm';
 import { ImageViewer } from '../../../../src/components/ImageViewer';
 import { Hotel } from '../../../../src/lib/types';
 
@@ -18,16 +19,12 @@ export default function Hotels() {
   const { colors } = useTheme();
   const styles = makeStyles(colors);
   const { id } = useLocalSearchParams<{ id: string }>();
-  const trip = useStore((s) => s.trips.find((t) => t.id === id));
-  const hotels = useStore((s) => s.hotels);
-  const categories = useStore((s) => s.budgetCategories);
-  const addHotel = useStore((s) => s.addHotel);
-  const updateHotel = useStore((s) => s.updateHotel);
-  const deleteHotel = useStore((s) => s.deleteHotel);
-  const attachProof = useStore((s) => s.attachHotelProof);
-  const syncSourceExpense = useStore((s) => s.syncSourceExpense);
-  const syncSourceDocument = useStore((s) => s.syncSourceDocument);
-  const syncSourceItinerary = useStore((s) => s.syncSourceItinerary);
+  const { data: trip } = useTrip(id);
+  const { data: hotels = [] } = useHotels(id);
+  const { data: categories = [] } = useBudgetCategories(id);
+  const saveHotel = useSaveHotel(id);
+  const deleteHotel = useDeleteHotel(id);
+  const attachProof = useAttachHotelProof(id);
 
   const [adding, setAdding] = React.useState(false);
   const [viewer, setViewer] = React.useState<{ uri: string; title: string } | null>(null);
@@ -65,34 +62,24 @@ export default function Hotels() {
 
   const canSave = name.trim() && checkIn.trim() && checkOut.trim();
 
-  const save = () => {
-    if (!canSave) return;
-    const priceNum = Number(price) || 0;
-    const nm = name.trim();
-    const ci = checkIn.trim();
-    const co = checkOut.trim();
-
-    const fields = { name: nm, checkIn: ci, checkOut: co, totalPrice: priceNum || undefined, currency: trip.baseCurrency, proofUri };
-
-    // Add or edit the hotel, then keep its linked records in sync (upsert one
-    // each) so editing the price updates the expense and the proof shows in Documents.
-    const hotelId = editingId ?? addHotel({ tripId: trip.id, ...fields });
-    if (editingId) updateHotel(editingId, fields);
-
-    syncSourceExpense({
-      sourceId: hotelId,
-      tripId: trip.id,
-      categoryId: findCategoryId(categories, trip.id, ['hotel', 'stay', 'villa', 'accom', 'lodg']),
-      amount: priceNum,
-      currency: trip.baseCurrency,
-      description: `Hotel – ${nm}`,
-      spentAt: ci,
-      paidBy: 'Me',
-    });
-    syncSourceDocument({ sourceId: hotelId, sourceTag: 'booking', tripId: trip.id, type: 'other', title: `Hotel – ${nm} booking`, fileUri: proofUri });
-    syncSourceItinerary({ sourceId: hotelId, tripId: trip.id, dayDate: ci, time: '15:00', title: `Check in – ${nm}`, type: 'stay', location: nm });
-
-    close();
+  const save = async () => {
+    if (!canSave || saveHotel.isPending) return;
+    try {
+      await saveHotel.mutateAsync({
+        tripId: trip.id,
+        editingId,
+        name: name.trim(),
+        checkIn: checkIn.trim(),
+        checkOut: checkOut.trim(),
+        price: Number(price) || 0,
+        currency: trip.baseCurrency,
+        categoryId: findCategoryId(categories, trip.id, ['hotel', 'stay', 'villa', 'accom', 'lodg']),
+        proofUri,
+      });
+      close();
+    } catch (e: any) {
+      notify('Could not save hotel', e?.message ?? 'Please try again.');
+    }
   };
 
   const askDelete = () => {
@@ -102,18 +89,13 @@ export default function Hotels() {
     confirmAction(
       'Delete hotel',
       'This also removes its linked expense, document and itinerary entry. Continue?',
-      () => deleteHotel(hid)
+      () => deleteHotel.mutate(hid)
     );
   };
 
   const uploadProof = async (h: Hotel) => {
     const res = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, quality: 0.6 });
-    if (!res.canceled) {
-      const uri = res.assets[0].uri;
-      attachProof(h.id, uri);
-      // Also surface the booking proof in the trip's Documents tab.
-      syncSourceDocument({ sourceId: h.id, sourceTag: 'booking', tripId: trip.id, type: 'other', title: `Hotel – ${h.name} booking`, fileUri: uri });
-    }
+    if (!res.canceled) attachProof.mutate({ hotel: h, uri: res.assets[0].uri });
   };
 
   const displayTotal = (h: Hotel, n: number) =>
@@ -215,7 +197,7 @@ export default function Hotels() {
               )}
             </Pressable>
 
-            <Button label={editingId ? 'Save changes' : 'Save hotel'} onPress={save} disabled={!canSave} full style={{ marginTop: spacing.md }} />
+            <Button label={saveHotel.isPending ? 'Saving…' : editingId ? 'Save changes' : 'Save hotel'} onPress={save} disabled={!canSave || saveHotel.isPending} full style={{ marginTop: spacing.md }} />
             {editingId && (
               <Button label="Delete hotel" icon="trash-outline" variant="danger" onPress={askDelete} full style={{ marginTop: spacing.sm, marginBottom: spacing.xl }} />
             )}

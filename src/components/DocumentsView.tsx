@@ -2,13 +2,13 @@ import React from 'react';
 import { View, Text, StyleSheet, Pressable, Image, Modal, ScrollView } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { Ionicons } from '@expo/vector-icons';
-import { useStore } from '../store/useStore';
+import { useDocuments, useAddDocument, useDeleteDocument } from '../hooks/useTripData';
 import { Button, Field, EmptyState, IconCircle, Pill } from './ui';
 import { font, radius, shadow, spacing, Palette } from '../theme';
 import { useTheme } from '../theme/useTheme';
 import { DocumentType, TravelDocument } from '../lib/types';
 import { fmtDate } from '../lib/format';
-import { confirmAction } from '../lib/confirm';
+import { confirmAction, notify } from '../lib/confirm';
 import dayjs from 'dayjs';
 
 const TYPE_META: Record<DocumentType, { icon: any; color: string; label: string }> = {
@@ -24,9 +24,9 @@ const TYPES: DocumentType[] = ['passport', 'id', 'visa', 'insurance', 'other'];
 export function DocumentsView({ tripId }: { tripId: string | null }) {
   const { colors } = useTheme();
   const styles = makeStyles(colors);
-  const documents = useStore((s) => s.documents);
-  const addDocument = useStore((s) => s.addDocument);
-  const deleteDocument = useStore((s) => s.deleteDocument);
+  const { data: documents = [] } = useDocuments(tripId);
+  const addDocument = useAddDocument(tripId);
+  const deleteDocument = useDeleteDocument(tripId);
 
   const [adding, setAdding] = React.useState(false);
   const [title, setTitle] = React.useState('');
@@ -47,16 +47,20 @@ export function DocumentsView({ tripId }: { tripId: string | null }) {
     setTitle(''); setNumber(''); setExpiry(''); setType('passport'); setFileUri(undefined); setAdding(false);
   };
 
-  const save = () => {
-    if (!title.trim()) return;
-    addDocument({ tripId, type, title: title.trim(), number: number.trim() || undefined, expiryDate: expiry.trim() || undefined, fileUri });
-    reset();
+  const save = async () => {
+    if (!title.trim() || addDocument.isPending) return;
+    try {
+      await addDocument.mutateAsync({ tripId, type, title: title.trim(), number: number.trim() || undefined, expiryDate: expiry.trim() || undefined, fileUri });
+      reset();
+    } catch (e: any) {
+      notify('Could not save document', e?.message ?? 'Please try again.');
+    }
   };
 
   const confirmDelete = (d: TravelDocument) => {
     // Close the detail sheet first so the confirm dialog isn't hidden behind it.
     setViewing(null);
-    confirmAction('Delete document', `Remove "${d.title}"?`, () => deleteDocument(d.id));
+    confirmAction('Delete document', `Remove "${d.title}"?`, () => deleteDocument.mutate(d.id));
   };
 
   return (
@@ -131,7 +135,7 @@ export function DocumentsView({ tripId }: { tripId: string | null }) {
               )}
             </Pressable>
 
-            <Button label="Save document" onPress={save} disabled={!title.trim()} full style={{ marginTop: spacing.md, marginBottom: spacing.xl }} />
+            <Button label={addDocument.isPending ? 'Saving…' : 'Save document'} onPress={save} disabled={!title.trim() || addDocument.isPending} full style={{ marginTop: spacing.md, marginBottom: spacing.xl }} />
           </ScrollView>
         </View>
       </Modal>

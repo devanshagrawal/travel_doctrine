@@ -4,14 +4,15 @@ import { useLocalSearchParams } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 import { Ionicons } from '@expo/vector-icons';
 import dayjs from 'dayjs';
-import { useStore } from '../../../../src/store/useStore';
+import { useTrip } from '../../../../src/hooks/useTrips';
+import { useFlights, useBudgetCategories, useSaveFlight, useDeleteFlight, useAttachBoardingPass } from '../../../../src/hooks/useTripData';
 import { Button, Field, EmptyState, Pill } from '../../../../src/components/ui';
 import { font, radius, shadow, spacing, Palette } from '../../../../src/theme';
 import { useTheme } from '../../../../src/theme/useTheme';
 import { fmtDate, fmtTime } from '../../../../src/lib/format';
 import { findCategoryId } from '../../../../src/lib/selectors';
 import { formatMoney } from '../../../../src/lib/currency';
-import { confirmAction } from '../../../../src/lib/confirm';
+import { confirmAction, notify } from '../../../../src/lib/confirm';
 import { ImageViewer } from '../../../../src/components/ImageViewer';
 import { Flight } from '../../../../src/lib/types';
 
@@ -19,16 +20,12 @@ export default function Flights() {
   const { colors } = useTheme();
   const styles = makeStyles(colors);
   const { id } = useLocalSearchParams<{ id: string }>();
-  const trip = useStore((s) => s.trips.find((t) => t.id === id));
-  const flights = useStore((s) => s.flights);
-  const categories = useStore((s) => s.budgetCategories);
-  const addFlight = useStore((s) => s.addFlight);
-  const updateFlight = useStore((s) => s.updateFlight);
-  const deleteFlight = useStore((s) => s.deleteFlight);
-  const attachPass = useStore((s) => s.attachBoardingPass);
-  const syncSourceExpense = useStore((s) => s.syncSourceExpense);
-  const syncSourceDocument = useStore((s) => s.syncSourceDocument);
-  const syncSourceItinerary = useStore((s) => s.syncSourceItinerary);
+  const { data: trip } = useTrip(id);
+  const { data: flights = [] } = useFlights(id);
+  const { data: categories = [] } = useBudgetCategories(id);
+  const saveFlight = useSaveFlight(id);
+  const deleteFlight = useDeleteFlight(id);
+  const attachPass = useAttachBoardingPass(id);
 
   const [adding, setAdding] = React.useState(false);
   const [viewer, setViewer] = React.useState<{ uri: string; title: string } | null>(null);
@@ -77,56 +74,27 @@ export default function Flights() {
 
   const canSave = airline.trim() && from.trim() && to.trim() && date.trim();
 
-  const save = () => {
-    if (!canSave) return;
-    const dayPart = date.trim();
-    const timePart = time.trim() || '00:00';
-    const departAt = `${dayPart}T${timePart}:00`;
-    const priceNum = Number(price) || 0;
-    const name = airline.trim();
-    const fromCode = from.trim().toUpperCase();
-    const toCode = to.trim().toUpperCase();
-    const routeLabel = `${fromCode} → ${toCode}`;
-
-    const fields = {
-      airline: name,
-      fromCode,
-      toCode,
-      departAt,
-      price: priceNum || undefined,
-      currency: trip.baseCurrency,
-      bookingProofUri: proofUri,
-      boardingPassUri: boardingUri,
-    };
-
-    // Add or edit the flight, then keep its linked records in sync. The sync
-    // helpers upsert one record each (create/update/remove), so editing the
-    // price updates the expense, and attaching a proof adds a document.
-    const flightId = editingId ?? addFlight({ tripId: trip.id, ...fields });
-    if (editingId) updateFlight(editingId, fields);
-
-    syncSourceExpense({
-      sourceId: flightId,
-      tripId: trip.id,
-      categoryId: findCategoryId(categories, trip.id, ['flight', 'air']),
-      amount: priceNum,
-      currency: trip.baseCurrency,
-      description: `Flight – ${name} (${routeLabel})`,
-      spentAt: dayPart,
-      paidBy: 'Me',
-    });
-    syncSourceDocument({ sourceId: flightId, sourceTag: 'booking', tripId: trip.id, type: 'other', title: `Flight – ${name} booking`, fileUri: proofUri });
-    syncSourceDocument({ sourceId: flightId, sourceTag: 'boarding', tripId: trip.id, type: 'other', title: `Flight – ${name} boarding pass`, fileUri: boardingUri });
-    syncSourceItinerary({
-      sourceId: flightId,
-      tripId: trip.id,
-      dayDate: dayPart,
-      time: time.trim() || undefined,
-      title: `Flight – ${name} (${routeLabel})`,
-      type: 'transport',
-    });
-
-    close();
+  const save = async () => {
+    if (!canSave || saveFlight.isPending) return;
+    try {
+      await saveFlight.mutateAsync({
+        tripId: trip.id,
+        editingId,
+        airline: airline.trim(),
+        fromCode: from.trim().toUpperCase(),
+        toCode: to.trim().toUpperCase(),
+        dayPart: date.trim(),
+        timePart: time.trim(),
+        price: Number(price) || 0,
+        currency: trip.baseCurrency,
+        categoryId: findCategoryId(categories, trip.id, ['flight', 'air']),
+        proofUri,
+        boardingUri,
+      });
+      close();
+    } catch (e: any) {
+      notify('Could not save flight', e?.message ?? 'Please try again.');
+    }
   };
 
   const askDelete = () => {
@@ -136,18 +104,13 @@ export default function Flights() {
     confirmAction(
       'Delete flight',
       'This also removes its linked expense, document and itinerary entry. Continue?',
-      () => deleteFlight(fid)
+      () => deleteFlight.mutate(fid)
     );
   };
 
   const uploadPass = async (f: Flight) => {
     const res = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, quality: 0.6 });
-    if (!res.canceled) {
-      const uri = res.assets[0].uri;
-      attachPass(f.id, uri);
-      // Also surface the boarding pass in the trip's Documents tab.
-      syncSourceDocument({ sourceId: f.id, sourceTag: 'boarding', tripId: trip.id, type: 'other', title: `Flight – ${f.airline} boarding pass`, fileUri: uri });
-    }
+    if (!res.canceled) attachPass.mutate({ flight: f, uri: res.assets[0].uri });
   };
 
   const hasRoute = (f: Flight) => !!(f.fromCode && f.toCode);
@@ -265,7 +228,7 @@ export default function Flights() {
               <UploadTile label="Boarding pass" hint="optional" uri={boardingUri} onPress={() => pick(setBoardingUri)} />
             </View>
 
-            <Button label={editingId ? 'Save changes' : 'Save flight'} onPress={save} disabled={!canSave} full style={{ marginTop: spacing.md }} />
+            <Button label={saveFlight.isPending ? 'Saving…' : editingId ? 'Save changes' : 'Save flight'} onPress={save} disabled={!canSave || saveFlight.isPending} full style={{ marginTop: spacing.md }} />
             {editingId && (
               <Button label="Delete flight" icon="trash-outline" variant="danger" onPress={askDelete} full style={{ marginTop: spacing.sm, marginBottom: spacing.xl }} />
             )}

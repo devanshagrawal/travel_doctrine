@@ -3,9 +3,8 @@ import { View, Text, StyleSheet, ScrollView, Pressable, ActivityIndicator } from
 import { useRouter, useLocalSearchParams, Stack } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { useStore } from '../../../../src/store/useStore';
 import { useTrip, useSetTripCompleted } from '../../../../src/hooks/useTrips';
-import { useExpenses, useBudgetCategories, useMembers, useItinerary, useTodos } from '../../../../src/hooks/useTripData';
+import { useExpenses, useBudgetCategories, useMembers, useItinerary, useTodos, useDocuments, useFlights, useHotels } from '../../../../src/hooks/useTripData';
 import { TripCover } from '../../../../src/components/TripCover';
 import { BudgetMeter } from '../../../../src/components/BudgetMeter';
 import { AvatarStack } from '../../../../src/components/Avatar';
@@ -28,9 +27,9 @@ export default function TripOverview() {
   const { data: collaborators = [] } = useMembers(id);
   const { data: itinerary = [] } = useItinerary(id);
   const { data: todos = [] } = useTodos(id);
-  const documents = useStore((s) => s.documents);
-  const flights = useStore((s) => s.flights);
-  const hotels = useStore((s) => s.hotels);
+  const { data: documents = [] } = useDocuments(id);
+  const { data: flights = [] } = useFlights(id);
+  const { data: hotels = [] } = useHotels(id);
   const setCompleted = useSetTripCompleted();
 
   if (isLoading) {
