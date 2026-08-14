@@ -5,9 +5,12 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useStore } from '../../src/store/useStore';
 import { Button, Field } from '../../src/components/ui';
-import { colors, font, spacing } from '../../src/theme';
+import { font, spacing, Palette } from '../../src/theme';
+import { useTheme } from '../../src/theme/useTheme';
 
 export default function Signup() {
+  const { colors } = useTheme();
+  const styles = makeStyles(colors);
   const router = useRouter();
   const signup = useStore((s) => s.signup);
   const [name, setName] = React.useState('');
@@ -55,7 +58,7 @@ export default function Signup() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: Palette) => StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.bg },
   scroll: { flexGrow: 1, padding: spacing.xl, justifyContent: 'center' },
   back: { flexDirection: 'row', alignItems: 'center', position: 'absolute', top: spacing.lg, left: spacing.lg },

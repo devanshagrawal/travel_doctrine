@@ -4,7 +4,8 @@ import * as ImagePicker from 'expo-image-picker';
 import { Ionicons } from '@expo/vector-icons';
 import { useStore } from '../store/useStore';
 import { Button, Field, EmptyState, IconCircle, Pill } from './ui';
-import { colors, font, radius, shadow, spacing } from '../theme';
+import { font, radius, shadow, spacing, Palette } from '../theme';
+import { useTheme } from '../theme/useTheme';
 import { DocumentType, TravelDocument } from '../lib/types';
 import { fmtDate } from '../lib/format';
 import { confirmAction } from '../lib/confirm';
@@ -21,6 +22,8 @@ const TYPE_META: Record<DocumentType, { icon: any; color: string; label: string 
 const TYPES: DocumentType[] = ['passport', 'id', 'visa', 'insurance', 'other'];
 
 export function DocumentsView({ tripId }: { tripId: string | null }) {
+  const { colors } = useTheme();
+  const styles = makeStyles(colors);
   const documents = useStore((s) => s.documents);
   const addDocument = useStore((s) => s.addDocument);
   const deleteDocument = useStore((s) => s.deleteDocument);
@@ -161,7 +164,16 @@ export function DocumentsView({ tripId }: { tripId: string | null }) {
               <DetailRow label="Expiry date" value={viewing.expiryDate ? fmtDate(viewing.expiryDate, 'MMM D, YYYY') : '—'} />
               <DetailRow label="Type" value={TYPE_META[viewing.type].label} />
 
-              <Button label="Delete document" icon="trash-outline" variant="danger" onPress={() => confirmDelete(viewing)} full style={{ marginTop: spacing.lg }} />
+              {viewing.sourceId ? (
+                <View style={styles.linkedNote}>
+                  <Ionicons name="link" size={16} color={colors.textMuted} />
+                  <Text style={styles.linkedNoteText}>
+                    This document is attached to a flight or hotel booking. To remove it, delete that booking from the Flights or Hotels tab.
+                  </Text>
+                </View>
+              ) : (
+                <Button label="Delete document" icon="trash-outline" variant="danger" onPress={() => confirmDelete(viewing)} full style={{ marginTop: spacing.lg }} />
+              )}
             </ScrollView>
           )}
         </View>
@@ -171,6 +183,8 @@ export function DocumentsView({ tripId }: { tripId: string | null }) {
 }
 
 function DetailRow({ label, value }: { label: string; value: string }) {
+  const { colors } = useTheme();
+  const styles = makeStyles(colors);
   return (
     <View style={styles.detailRow}>
       <Text style={styles.detailLabel}>{label}</Text>
@@ -179,7 +193,7 @@ function DetailRow({ label, value }: { label: string; value: string }) {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: Palette) => StyleSheet.create({
   scroll: { padding: spacing.lg },
   docCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.md, marginBottom: spacing.md, borderWidth: 1, borderColor: colors.border, ...shadow.card },
   thumb: { width: 48, height: 48, borderRadius: 10, backgroundColor: colors.surfaceAlt },
@@ -194,6 +208,8 @@ const styles = StyleSheet.create({
   detailRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: spacing.md, borderBottomWidth: 1, borderBottomColor: colors.border },
   detailLabel: { fontSize: font.size.sm, color: colors.textMuted },
   detailValue: { fontSize: font.size.md, fontWeight: font.weight.semibold, color: colors.text },
+  linkedNote: { flexDirection: 'row', gap: 8, alignItems: 'flex-start', backgroundColor: colors.surfaceAlt, borderRadius: radius.md, padding: spacing.md, marginTop: spacing.lg },
+  linkedNoteText: { flex: 1, fontSize: font.size.sm, color: colors.textMuted, lineHeight: 19 },
   backdrop: { flex: 1, backgroundColor: 'rgba(15,23,42,0.4)' },
   sheet: { backgroundColor: colors.surface, borderTopLeftRadius: radius.xl, borderTopRightRadius: radius.xl, paddingHorizontal: spacing.lg, maxHeight: '86%' },
   handle: { width: 40, height: 4, borderRadius: 2, backgroundColor: colors.border, alignSelf: 'center', marginTop: spacing.md, marginBottom: spacing.md },

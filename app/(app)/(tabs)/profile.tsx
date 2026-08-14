@@ -2,15 +2,18 @@ import React from 'react';
 import { View, Text, StyleSheet, ScrollView, Pressable, Modal } from 'react-native';
 import { useRouter } from 'expo-router';
 import { confirmAction } from '../../../src/lib/confirm';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { Masthead } from '../../../src/components/Masthead';
 import { Ionicons } from '@expo/vector-icons';
 import { useStore } from '../../../src/store/useStore';
 import { Card, Button, Field } from '../../../src/components/ui';
 import { CURRENCIES, currencyMeta } from '../../../src/lib/currency';
-import { colors, font, radius, shadow, spacing } from '../../../src/theme';
+import { font, radius, shadow, spacing, Palette } from '../../../src/theme';
+import { useTheme } from '../../../src/theme/useTheme';
 
 export default function Profile() {
   const router = useRouter();
+  const { colors, mode, toggle } = useTheme();
+  const styles = makeStyles(colors);
   const user = useStore((s) => s.user);
   const logout = useStore((s) => s.logout);
   const setHomeCurrency = useStore((s) => s.setHomeCurrency);
@@ -47,7 +50,8 @@ export default function Profile() {
   const initials = (user?.fullName || 'U').split(' ').map((s) => s[0]).slice(0, 2).join('');
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top']}>
+    <View style={styles.safe}>
+      <Masthead eyebrow="Account" title="Profile" />
       <ScrollView contentContainerStyle={styles.scroll}>
         <View style={styles.profileHeader}>
           <View style={[styles.avatar, { backgroundColor: user?.avatarColor || colors.primary }]}>
@@ -98,6 +102,21 @@ export default function Profile() {
 
         <Card padded={false} style={{ marginTop: spacing.md }}>
           <View style={styles.row}>
+            <Ionicons name={mode === 'dark' ? 'moon' : 'sunny'} size={20} color={colors.primary} />
+            <Text style={styles.rowText}>Appearance</Text>
+            <View style={styles.segment}>
+              <Pressable style={[styles.segBtn, mode === 'light' && styles.segBtnOn]} onPress={() => mode === 'dark' && toggle()}>
+                <Text style={[styles.segText, mode === 'light' && styles.segTextOn]}>Light</Text>
+              </Pressable>
+              <Pressable style={[styles.segBtn, mode === 'dark' && styles.segBtnOn]} onPress={() => mode === 'light' && toggle()}>
+                <Text style={[styles.segText, mode === 'dark' && styles.segTextOn]}>Dark</Text>
+              </Pressable>
+            </View>
+          </View>
+        </Card>
+
+        <Card padded={false} style={{ marginTop: spacing.md }}>
+          <View style={styles.row}>
             <Ionicons name="information-circle-outline" size={20} color={colors.textMuted} />
             <Text style={styles.rowText}>About</Text>
             <Text style={styles.rowValue}>Wander · Prototype</Text>
@@ -122,16 +141,21 @@ export default function Profile() {
           <Button label="Save profile" onPress={saveProfile} disabled={!name.trim()} full style={{ marginTop: spacing.sm, marginBottom: spacing.xl }} />
         </View>
       </Modal>
-    </SafeAreaView>
+    </View>
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: Palette) => StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.bg },
   scroll: { padding: spacing.lg },
   profileHeader: { alignItems: 'center', paddingVertical: spacing.lg },
   avatar: { width: 84, height: 84, borderRadius: 42, alignItems: 'center', justifyContent: 'center', ...shadow.card },
-  avatarText: { color: colors.white, fontSize: font.size.xxl, fontWeight: font.weight.bold },
+  avatarText: { color: '#FCF7EE', fontSize: font.size.xxl, fontWeight: font.weight.bold },
+  segment: { flexDirection: 'row', backgroundColor: colors.surfaceAlt, borderRadius: radius.pill, padding: 3 },
+  segBtn: { paddingHorizontal: 14, paddingVertical: 6, borderRadius: radius.pill },
+  segBtnOn: { backgroundColor: colors.surface, ...shadow.card },
+  segText: { fontSize: font.size.sm, fontWeight: font.weight.semibold, color: colors.textMuted },
+  segTextOn: { color: colors.primary },
   name: { fontSize: font.size.xl, fontWeight: font.weight.bold, color: colors.text, marginTop: spacing.md },
   email: { fontSize: font.size.sm, color: colors.textMuted, marginTop: 2 },
   editProfileBtn: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: spacing.md, backgroundColor: colors.primarySoft, paddingHorizontal: 14, paddingVertical: 8, borderRadius: radius.pill },

@@ -1,12 +1,15 @@
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView, Pressable, TextInput, Modal, FlatList } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { CURRENCIES, RATES, convert, currencyMeta } from '../../../src/lib/currency';
-import { colors, font, radius, shadow, spacing } from '../../../src/theme';
+import { font, radius, shadow, spacing, Palette } from '../../../src/theme';
+import { useTheme } from '../../../src/theme/useTheme';
+import { Masthead } from '../../../src/components/Masthead';
 import { useStore } from '../../../src/store/useStore';
 
 export default function CurrencyExchanger() {
+  const { colors } = useTheme();
+  const styles = makeStyles(colors);
   const homeCurrency = useStore((s) => s.user?.homeCurrency || 'USD');
   const [amount, setAmount] = React.useState('100');
   const [from, setFrom] = React.useState('USD');
@@ -29,11 +32,9 @@ export default function CurrencyExchanger() {
   const quick = CURRENCIES.filter((c) => c.code !== from).slice(0, 6);
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top']}>
+    <View style={styles.safe}>
+      <Masthead eyebrow="Offline rates · estimates" title="Currency" />
       <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
-        <Text style={styles.h1}>Currency</Text>
-        <Text style={styles.sub}>Offline rates · for planning estimates</Text>
-
         <View style={styles.card}>
           {/* From */}
           <Text style={styles.label}>Amount</Text>
@@ -126,11 +127,11 @@ export default function CurrencyExchanger() {
           />
         </View>
       </Modal>
-    </SafeAreaView>
+    </View>
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: Palette) => StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.bg },
   scroll: { padding: spacing.lg },
   h1: { fontSize: font.size.xxl, fontWeight: font.weight.bold, color: colors.text },

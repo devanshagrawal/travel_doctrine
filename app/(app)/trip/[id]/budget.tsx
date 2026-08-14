@@ -5,11 +5,14 @@ import { Ionicons } from '@expo/vector-icons';
 import { useStore } from '../../../../src/store/useStore';
 import { DonutChart } from '../../../../src/components/DonutChart';
 import { Card } from '../../../../src/components/ui';
-import { colors, font, radius, spacing } from '../../../../src/theme';
+import { font, radius, spacing, Palette } from '../../../../src/theme';
+import { useTheme } from '../../../../src/theme/useTheme';
 import { formatMoney } from '../../../../src/lib/currency';
 import { budgetSummary, spendByCategory } from '../../../../src/lib/selectors';
 
 export default function Budget() {
+  const { colors } = useTheme();
+  const styles = makeStyles(colors);
   const { id } = useLocalSearchParams<{ id: string }>();
   const trip = useStore((s) => s.trips.find((t) => t.id === id));
   const expenses = useStore((s) => s.expenses);
@@ -78,7 +81,7 @@ export default function Budget() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: Palette) => StyleSheet.create({
   scroll: { padding: spacing.lg },
   cardTitle: { fontSize: font.size.md, fontWeight: font.weight.bold, color: colors.text, alignSelf: 'flex-start' },
   legend: { alignSelf: 'stretch', gap: 10 },

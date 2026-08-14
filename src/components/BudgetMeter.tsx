@@ -1,7 +1,8 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import Svg, { Circle } from 'react-native-svg';
-import { colors, font } from '../theme';
+import { font, Palette } from '../theme';
+import { useTheme } from '../theme/useTheme';
 import { formatMoney } from '../lib/currency';
 
 // A circular budget "meter": a ring that fills with spend and changes
@@ -19,6 +20,8 @@ export function BudgetMeter({
   size?: number;
   stroke?: number;
 }) {
+  const { colors } = useTheme();
+  const styles = makeStyles(colors);
   const pct = budget > 0 ? spent / budget : 0;
   const clamped = Math.min(pct, 1);
   const radius = (size - stroke) / 2;
@@ -57,7 +60,7 @@ export function BudgetMeter({
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: Palette) => StyleSheet.create({
   center: { position: 'absolute', alignItems: 'center' },
   pct: { fontSize: font.size.xxl, fontWeight: font.weight.bold },
   label: { fontSize: font.size.xs, color: colors.textMuted, marginTop: -2, textTransform: 'uppercase', letterSpacing: 1 },

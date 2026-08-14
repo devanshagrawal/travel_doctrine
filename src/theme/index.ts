@@ -1,35 +1,12 @@
-// Central design tokens for the whole app.
-// Keeping everything here means a single place to restyle the prototype.
+// Central design tokens. Colours live in ./palettes (editorial light + dark);
+// this module re-exports the light palette as the default `colors` (used by
+// screens not yet converted to the dynamic theme) plus the shared scales.
+import { lightColors } from './palettes';
 
-export const colors = {
-  // Brand
-  primary: '#2563EB', // blue-600
-  primaryDark: '#1D4ED8',
-  primarySoft: '#EFF4FF',
-  accent: '#F97316', // orange-500 (travel / sunset)
-  accentSoft: '#FFF2E8',
+export { lightColors, darkColors } from './palettes';
+export type { Palette } from './palettes';
 
-  // Semantic
-  success: '#16A34A',
-  successSoft: '#E7F6EC',
-  warning: '#D97706',
-  warningSoft: '#FEF3E2',
-  danger: '#DC2626',
-  dangerSoft: '#FCECEC',
-
-  // Neutrals
-  bg: '#F6F7FB',
-  surface: '#FFFFFF',
-  surfaceAlt: '#F1F3F9',
-  border: '#E5E8F0',
-  text: '#0F172A', // slate-900
-  textMuted: '#64748B', // slate-500
-  textFaint: '#94A3B8', // slate-400
-  white: '#FFFFFF',
-
-  // Category palette (used for budget breakdown)
-  cat: ['#2563EB', '#F97316', '#16A34A', '#9333EA', '#0EA5E9', '#E11D48', '#CA8A04', '#0D9488'],
-} as const;
+export const colors = lightColors;
 
 export const spacing = {
   xs: 4,
@@ -46,6 +23,15 @@ export const radius = {
   lg: 16,
   xl: 24,
   pill: 999,
+} as const;
+
+// Display face = Fraunces (editorial serif, loaded in the root layout).
+// Body/UI stays on the platform system font.
+export const fonts = {
+  serif: 'Fraunces_600SemiBold',
+  serifMedium: 'Fraunces_500Medium',
+  serifRegular: 'Fraunces_400Regular',
+  serifItalic: 'Fraunces_500Medium_Italic',
 } as const;
 
 export const font = {
@@ -68,17 +54,17 @@ export const font = {
 
 export const shadow = {
   card: {
-    shadowColor: '#0F172A',
-    shadowOpacity: 0.06,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 4 },
+    shadowColor: '#2A1E12',
+    shadowOpacity: 0.07,
+    shadowRadius: 14,
+    shadowOffset: { width: 0, height: 6 },
     elevation: 2,
   },
   floating: {
-    shadowColor: '#0F172A',
-    shadowOpacity: 0.16,
-    shadowRadius: 16,
-    shadowOffset: { width: 0, height: 8 },
+    shadowColor: '#2A1E12',
+    shadowOpacity: 0.18,
+    shadowRadius: 18,
+    shadowOffset: { width: 0, height: 10 },
     elevation: 6,
   },
 } as const;

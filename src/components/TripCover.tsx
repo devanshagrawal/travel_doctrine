@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, ViewStyle, Image } from 'react-native';
 import Svg, { Defs, LinearGradient, Stop, Rect } from 'react-native-svg';
+import { LinearGradient as Scrim } from 'expo-linear-gradient';
 import { font, radius } from '../theme';
 
 function shade(hex: string, amt: number): string {
@@ -21,6 +22,7 @@ export function TripCover({
   image,
   height = 140,
   radiusTop = true,
+  scrim = false,
   style,
   children,
 }: {
@@ -29,6 +31,7 @@ export function TripCover({
   image?: string;
   height?: number;
   radiusTop?: boolean;
+  scrim?: boolean; // soft bottom-up dark gradient for overlaid text
   style?: ViewStyle;
   children?: React.ReactNode;
 }) {
@@ -55,6 +58,14 @@ export function TripCover({
           </Defs>
           <Rect x="0" y="0" width="100%" height={height} fill={`url(#${gradId})`} />
         </Svg>
+      )}
+      {scrim && (
+        <Scrim
+          colors={['transparent', 'rgba(12,8,3,0.15)', 'rgba(12,8,3,0.62)']}
+          locations={[0, 0.5, 1]}
+          style={StyleSheet.absoluteFill}
+          pointerEvents="none"
+        />
       )}
       {emoji && !image && <Text style={styles.emoji}>{emoji}</Text>}
       {children}

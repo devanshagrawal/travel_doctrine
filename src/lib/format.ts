@@ -43,6 +43,17 @@ export function tripStatus(start: string, end: string): { label: string; tone: '
   return { label: 'Ongoing', tone: 'ongoing' };
 }
 
+// Status that also respects an explicit completion (completedAt overrides dates).
+export function tripStatusFor(trip: { startDate: string; endDate: string; completedAt?: string | null }) {
+  if (trip.completedAt) return { label: 'Completed', tone: 'past' as const };
+  return tripStatus(trip.startDate, trip.endDate);
+}
+
+// Is this trip finished — either manually completed or past its end date?
+export function isTripDone(trip: { endDate: string; completedAt?: string | null }): boolean {
+  return !!trip.completedAt || dayjs().isAfter(dayjs(trip.endDate), 'day');
+}
+
 // Simple id generator for locally-created records.
 export function uid(prefix = 'id'): string {
   return `${prefix}_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 7)}`;

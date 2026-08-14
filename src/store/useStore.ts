@@ -3,10 +3,14 @@ import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 import {
   BudgetCategory,
+  CashWallet,
+  Collaborator,
+  CollaboratorRole,
   Expense,
   Flight,
   Hotel,
   ItineraryItem,
+  Settlement,
   TodoItem,
   TravelDocument,
   Trip,
@@ -15,6 +19,7 @@ import {
 import { uid } from '../lib/format';
 import {
   seedBudgetCategories,
+  seedCollaborators,
   seedDocuments,
   seedExpenses,
   seedFlights,
@@ -24,6 +29,9 @@ import {
   seedTrips,
   seedUser,
 } from '../data/seed';
+
+// A palette of avatar colours assigned to invited collaborators in order.
+const CREW_COLORS = ['#0D9488', '#9333EA', '#E11D48', '#0EA5E9', '#CA8A04', '#16A34A', '#F97316'];
 
 // Default budget categories created for every new trip, so the budget
 // breakdown and expense category picker are never empty.
@@ -51,6 +59,9 @@ interface AppState {
   flights: Flight[];
   hotels: Hotel[];
   todos: TodoItem[];
+  collaborators: Collaborator[];
+  settlements: Settlement[];
+  cashWallets: CashWallet[];
 
   // ---- auth actions ----
   login: (email: string) => void;
@@ -63,6 +74,7 @@ interface AppState {
   // ---- trip actions ----
   addTrip: (t: Omit<Trip, 'id'>) => string;
   updateTrip: (id: string, patch: Partial<Trip>) => void;
+  setTripCompleted: (id: string, completed: boolean) => void;
   deleteTrip: (id: string) => void;
 
   // ---- nested record actions ----
@@ -87,6 +99,19 @@ interface AppState {
   toggleTodo: (id: string) => void;
   deleteTodo: (id: string) => void;
 
+  // ---- collaborators ----
+  addCollaborator: (tripId: string, name: string, email: string) => void;
+  removeCollaborator: (id: string) => void;
+  updateCollaboratorRole: (id: string, role: CollaboratorRole) => void;
+
+  // ---- settlements (split expenses) ----
+  addSettlement: (s: Omit<Settlement, 'id' | 'createdAt'>) => void;
+  deleteSettlement: (id: string) => void;
+
+  // ---- cash wallet (Model A) ----
+  loadCash: (tripId: string, currency: string, amount: number) => void;
+  adjustCash: (walletId: string, delta: number) => void;
+
   // ---- idempotent links (one record per flight/hotel source) ----
   syncSourceExpense: (p: Omit<Expense, 'id'> & { sourceId: string }) => void;
   syncSourceDocument: (p: Omit<TravelDocument, 'id'> & { sourceId: string; sourceTag: string }) => void;
@@ -104,6 +129,9 @@ const seedData = () => ({
   flights: seedFlights,
   hotels: seedHotels,
   todos: seedTodos,
+  collaborators: seedCollaborators,
+  settlements: [] as Settlement[],
+  cashWallets: [] as CashWallet[],
 });
 
 export const useStore = create<AppState>()(
@@ -132,11 +160,22 @@ export const useStore = create<AppState>()(
         const id = uid('trip');
         // Seed a default set of budget categories so budget/expenses aren't empty.
         const cats: BudgetCategory[] = DEFAULT_CATEGORIES.map((c) => ({ ...c, id: uid('bc'), tripId: id }));
-        set((s) => ({ trips: [{ ...t, id }, ...s.trips], budgetCategories: [...s.budgetCategories, ...cats] }));
+        // The creator is the owner of the new trip.
+        const u = get().user;
+        const owner: Collaborator[] = u
+          ? [{ id: uid('co'), tripId: id, name: u.fullName, email: u.email, avatarColor: u.avatarColor, role: 'owner', isMe: true }]
+          : [];
+        set((s) => ({
+          trips: [{ ...t, id }, ...s.trips],
+          budgetCategories: [...s.budgetCategories, ...cats],
+          collaborators: [...s.collaborators, ...owner],
+        }));
         return id;
       },
       updateTrip: (id, patch) =>
         set((s) => ({ trips: s.trips.map((t) => (t.id === id ? { ...t, ...patch } : t)) })),
+      setTripCompleted: (id, completed) =>
+        set((s) => ({ trips: s.trips.map((t) => (t.id === id ? { ...t, completedAt: completed ? new Date().toISOString() : null } : t)) })),
       deleteTrip: (id) =>
         set((s) => ({
           trips: s.trips.filter((t) => t.id !== id),
@@ -146,6 +185,10 @@ export const useStore = create<AppState>()(
           documents: s.documents.filter((x) => x.tripId !== id),
           flights: s.flights.filter((x) => x.tripId !== id),
           hotels: s.hotels.filter((x) => x.tripId !== id),
+          collaborators: s.collaborators.filter((x) => x.tripId !== id),
+          settlements: s.settlements.filter((x) => x.tripId !== id),
+          cashWallets: s.cashWallets.filter((x) => x.tripId !== id),
+          todos: s.todos.filter((x) => x.tripId !== id),
         })),
 
       addExpense: (e) => set((s) => ({ expenses: [{ ...e, id: uid('e') }, ...s.expenses] })),
@@ -201,6 +244,52 @@ export const useStore = create<AppState>()(
         set((s) => ({ todos: s.todos.map((t) => (t.id === id ? { ...t, done: !t.done } : t)) })),
       deleteTodo: (id) => set((s) => ({ todos: s.todos.filter((t) => t.id !== id) })),
 
+      addCollaborator: (tripId, name, email) =>
+        set((s) => {
+          const count = s.collaborators.filter((c) => c.tripId === tripId).length;
+          const collab: Collaborator = {
+            id: uid('co'),
+            tripId,
+            name: name.trim() || email.split('@')[0],
+            email: email.trim(),
+            avatarColor: CREW_COLORS[count % CREW_COLORS.length],
+            role: 'editor',
+          };
+          return { collaborators: [...s.collaborators, collab] };
+        }),
+      removeCollaborator: (id) =>
+        set((s) => ({ collaborators: s.collaborators.filter((c) => c.id !== id) })),
+      updateCollaboratorRole: (id, role) =>
+        set((s) => ({ collaborators: s.collaborators.map((c) => (c.id === id ? { ...c, role } : c)) })),
+
+      addSettlement: (st) =>
+        set((s) => ({ settlements: [...s.settlements, { ...st, id: uid('set'), createdAt: new Date().toISOString() }] })),
+      deleteSettlement: (id) =>
+        set((s) => ({ settlements: s.settlements.filter((x) => x.id !== id) })),
+
+      // Model A: loading cash is counted as spent now (a regular expense),
+      // and tops up the wallet balance. Spending it later won't re-count.
+      loadCash: (tripId, currency, amount) =>
+        set((s) => {
+          const existing = s.cashWallets.find((w) => w.tripId === tripId && w.currency === currency);
+          const wallets = existing
+            ? s.cashWallets.map((w) => (w.id === existing.id ? { ...w, balance: w.balance + amount, loaded: w.loaded + amount } : w))
+            : [...s.cashWallets, { id: uid('cash'), tripId, currency, balance: amount, loaded: amount }];
+          const expense: Expense = {
+            id: uid('e'),
+            tripId,
+            categoryId: null,
+            amount,
+            currency,
+            description: `Cash withdrawal (${currency})`,
+            spentAt: new Date().toISOString().slice(0, 10),
+            paidFrom: 'regular',
+          };
+          return { cashWallets: wallets, expenses: [expense, ...s.expenses] };
+        }),
+      adjustCash: (walletId, delta) =>
+        set((s) => ({ cashWallets: s.cashWallets.map((w) => (w.id === walletId ? { ...w, balance: Math.max(0, w.balance + delta) } : w)) })),
+
       // Upsert exactly one expense for a flight/hotel. amount<=0 removes it.
       // Keeps the auto-created expense in sync when price is added/edited/cleared.
       syncSourceExpense: (p) =>
@@ -254,8 +343,20 @@ export const useStore = create<AppState>()(
             );
             useStore.setState({ budgetCategories: [...state.budgetCategories, ...added] });
           }
+          // Backfill: any trip without an owner collaborator gets one (the user).
+          const collabs = state.collaborators ?? [];
+          const u = state.user;
+          const needOwner = state.trips.filter((t) => !collabs.some((c) => c.tripId === t.id));
+          if (u && needOwner.length > 0) {
+            const owners: Collaborator[] = needOwner.map((t) => ({
+              id: uid('co'), tripId: t.id, name: u.fullName, email: u.email, avatarColor: u.avatarColor, role: 'owner', isMe: true,
+            }));
+            useStore.setState({ collaborators: [...collabs, ...owners] });
+          } else if (!state.collaborators) {
+            useStore.setState({ collaborators: collabs });
+          }
         }
-        useStore.setState({ hasHydrated: true, todos: state?.todos ?? [] });
+        useStore.setState({ hasHydrated: true, todos: state?.todos ?? [], settlements: state?.settlements ?? [], cashWallets: state?.cashWallets ?? [] });
       },
     }
   )

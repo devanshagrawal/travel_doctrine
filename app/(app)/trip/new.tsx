@@ -7,12 +7,15 @@ import dayjs from 'dayjs';
 import { useStore } from '../../../src/store/useStore';
 import { Button, Field } from '../../../src/components/ui';
 import { CURRENCIES } from '../../../src/lib/currency';
-import { colors, font, radius, spacing } from '../../../src/theme';
+import { font, radius, spacing, Palette } from '../../../src/theme';
+import { useTheme } from '../../../src/theme/useTheme';
 
 const EMOJIS = ['🗼', '🌴', '🏖️', '⛰️', '🗽', '🏝️', '🎡', '🏔️', '🕌', '🌉'];
 const COVERS = ['#2563EB', '#E11D48', '#0D9488', '#9333EA', '#F97316', '#0EA5E9', '#CA8A04', '#16A34A'];
 
 export default function NewTrip() {
+  const { colors } = useTheme();
+  const styles = makeStyles(colors);
   const router = useRouter();
   const addTrip = useStore((s) => s.addTrip);
 
@@ -131,7 +134,7 @@ export default function NewTrip() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: Palette) => StyleSheet.create({
   scroll: { padding: spacing.lg },
   row: { flexDirection: 'row' },
   label: { fontSize: font.size.sm, fontWeight: font.weight.medium, color: colors.textMuted, marginBottom: 8 },

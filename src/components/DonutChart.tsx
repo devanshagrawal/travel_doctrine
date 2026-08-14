@@ -1,7 +1,8 @@
 import React from 'react';
 import { View, Text } from 'react-native';
 import Svg, { Circle, G } from 'react-native-svg';
-import { colors, font } from '../theme';
+import { font } from '../theme';
+import { useTheme } from '../theme/useTheme';
 
 export interface DonutSlice {
   value: number;
@@ -23,6 +24,7 @@ export function DonutChart({
   centerTop?: string;
   centerBottom?: string;
 }) {
+  const { colors } = useTheme();
   const radius = (size - stroke) / 2;
   const circumference = 2 * Math.PI * radius;
   const total = slices.reduce((s, x) => s + x.value, 0);

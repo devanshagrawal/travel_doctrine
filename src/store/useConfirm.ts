@@ -10,6 +10,7 @@ interface ConfirmConfig {
   onConfirm: () => void;
   confirmLabel?: string;
   destructive?: boolean;
+  infoOnly?: boolean; // single "OK" button, no destructive action
 }
 
 interface ConfirmState extends ConfirmConfig {
@@ -25,6 +26,7 @@ export const useConfirm = create<ConfirmState>((set, get) => ({
   message: '',
   confirmLabel: 'Delete',
   destructive: true,
+  infoOnly: false,
   onConfirm: () => {},
 
   show: (cfg) =>
@@ -35,6 +37,7 @@ export const useConfirm = create<ConfirmState>((set, get) => ({
       onConfirm: cfg.onConfirm,
       confirmLabel: cfg.confirmLabel ?? 'Delete',
       destructive: cfg.destructive ?? true,
+      infoOnly: cfg.infoOnly ?? false,
     }),
   hide: () => set({ open: false }),
   accept: () => {

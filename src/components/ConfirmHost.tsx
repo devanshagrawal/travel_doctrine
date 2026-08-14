@@ -1,12 +1,15 @@
 import React from 'react';
 import { View, Text, StyleSheet, Modal, Pressable } from 'react-native';
 import { useConfirm } from '../store/useConfirm';
-import { colors, font, radius, spacing } from '../theme';
+import { font, radius, spacing, Palette } from '../theme';
+import { useTheme } from '../theme/useTheme';
 
 // Rendered once at the app root. Shows a styled confirm dialog whenever
 // confirmAction() is called. Works the same on web and native.
 export function ConfirmHost() {
-  const { open, title, message, confirmLabel, destructive, hide, accept } = useConfirm();
+  const { colors } = useTheme();
+  const styles = makeStyles(colors);
+  const { open, title, message, confirmLabel, destructive, infoOnly, hide, accept } = useConfirm();
 
   return (
     <Modal visible={open} transparent animationType="fade" onRequestClose={hide}>
@@ -15,12 +18,20 @@ export function ConfirmHost() {
           <Text style={styles.title}>{title}</Text>
           {!!message && <Text style={styles.message}>{message}</Text>}
           <View style={styles.actions}>
-            <Pressable style={[styles.btn, styles.cancel]} onPress={hide}>
-              <Text style={styles.cancelText}>Cancel</Text>
-            </Pressable>
-            <Pressable style={[styles.btn, destructive ? styles.danger : styles.confirm]} onPress={accept}>
-              <Text style={[styles.btnText, { color: destructive ? colors.danger : colors.white }]}>{confirmLabel}</Text>
-            </Pressable>
+            {infoOnly ? (
+              <Pressable style={[styles.btn, styles.confirm]} onPress={hide}>
+                <Text style={[styles.btnText, { color: '#FCF7EE' }]}>Got it</Text>
+              </Pressable>
+            ) : (
+              <>
+                <Pressable style={[styles.btn, styles.cancel]} onPress={hide}>
+                  <Text style={styles.cancelText}>Cancel</Text>
+                </Pressable>
+                <Pressable style={[styles.btn, destructive ? styles.danger : styles.confirm]} onPress={accept}>
+                  <Text style={[styles.btnText, { color: destructive ? colors.danger : '#FCF7EE' }]}>{confirmLabel}</Text>
+                </Pressable>
+              </>
+            )}
           </View>
         </Pressable>
       </Pressable>
@@ -28,8 +39,8 @@ export function ConfirmHost() {
   );
 }
 
-const styles = StyleSheet.create({
-  backdrop: { flex: 1, backgroundColor: 'rgba(15,23,42,0.5)', alignItems: 'center', justifyContent: 'center', padding: spacing.xl },
+const makeStyles = (colors: Palette) => StyleSheet.create({
+  backdrop: { flex: 1, backgroundColor: 'rgba(15,10,4,0.55)', alignItems: 'center', justifyContent: 'center', padding: spacing.xl },
   dialog: { width: '100%', maxWidth: 360, backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.xl },
   title: { fontSize: font.size.lg, fontWeight: font.weight.bold, color: colors.text },
   message: { fontSize: font.size.md, color: colors.textMuted, marginTop: 8, lineHeight: 21 },

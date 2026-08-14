@@ -3,18 +3,33 @@ import { View, Text, ActivityIndicator, StyleSheet } from 'react-native';
 import { Stack } from 'expo-router';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
+import {
+  useFonts,
+  Fraunces_400Regular,
+  Fraunces_500Medium,
+  Fraunces_600SemiBold,
+  Fraunces_500Medium_Italic,
+} from '@expo-google-fonts/fraunces';
 import { useStore } from '../src/store/useStore';
 import { ConfirmHost } from '../src/components/ConfirmHost';
-import { colors, font } from '../src/theme';
+import { useTheme } from '../src/theme/useTheme';
+import { fonts } from '../src/theme';
 
 export default function RootLayout() {
   const hasHydrated = useStore((s) => s.hasHydrated);
+  const { mode, colors } = useTheme();
+  const [fontsLoaded] = useFonts({
+    Fraunces_400Regular,
+    Fraunces_500Medium,
+    Fraunces_600SemiBold,
+    Fraunces_500Medium_Italic,
+  });
 
-  if (!hasHydrated) {
+  if (!hasHydrated || !fontsLoaded) {
     return (
-      <View style={styles.splash}>
+      <View style={[styles.splash, { backgroundColor: colors.bg }]}>
         <Text style={styles.logo}>✈️</Text>
-        <Text style={styles.brand}>Wander</Text>
+        <Text style={[styles.brand, { color: colors.text, fontFamily: fontsLoaded ? fonts.serif : undefined }]}>Wander</Text>
         <ActivityIndicator color={colors.primary} style={{ marginTop: 20 }} />
       </View>
     );
@@ -22,7 +37,7 @@ export default function RootLayout() {
 
   return (
     <SafeAreaProvider>
-      <StatusBar style="dark" />
+      <StatusBar style={mode === 'dark' ? 'light' : 'dark'} />
       <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.bg } }}>
         <Stack.Screen name="index" />
         <Stack.Screen name="(auth)" />
@@ -34,7 +49,7 @@ export default function RootLayout() {
 }
 
 const styles = StyleSheet.create({
-  splash: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.bg },
+  splash: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   logo: { fontSize: 56 },
-  brand: { fontSize: font.size.xxl, fontWeight: font.weight.bold, color: colors.text, marginTop: 8 },
+  brand: { fontSize: 30, fontWeight: '700', marginTop: 8, letterSpacing: 0.5 },
 });

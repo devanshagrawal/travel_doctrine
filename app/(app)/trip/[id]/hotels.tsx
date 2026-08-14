@@ -5,7 +5,8 @@ import * as ImagePicker from 'expo-image-picker';
 import { Ionicons } from '@expo/vector-icons';
 import { useStore } from '../../../../src/store/useStore';
 import { Button, Field, EmptyState, Pill } from '../../../../src/components/ui';
-import { colors, font, radius, shadow, spacing } from '../../../../src/theme';
+import { font, radius, shadow, spacing, Palette } from '../../../../src/theme';
+import { useTheme } from '../../../../src/theme/useTheme';
 import { fmtDate, nights } from '../../../../src/lib/format';
 import { formatMoney } from '../../../../src/lib/currency';
 import { findCategoryId } from '../../../../src/lib/selectors';
@@ -14,6 +15,8 @@ import { ImageViewer } from '../../../../src/components/ImageViewer';
 import { Hotel } from '../../../../src/lib/types';
 
 export default function Hotels() {
+  const { colors } = useTheme();
+  const styles = makeStyles(colors);
   const { id } = useLocalSearchParams<{ id: string }>();
   const trip = useStore((s) => s.trips.find((t) => t.id === id));
   const hotels = useStore((s) => s.hotels);
@@ -226,7 +229,7 @@ export default function Hotels() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: Palette) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
   scroll: { padding: spacing.lg },
   card: { backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.lg, marginBottom: spacing.lg, borderWidth: 1, borderColor: colors.border, ...shadow.card },

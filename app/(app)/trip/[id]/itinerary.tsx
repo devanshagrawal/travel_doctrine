@@ -6,7 +6,8 @@ import dayjs from 'dayjs';
 import { confirmAction } from '../../../../src/lib/confirm';
 import { useStore } from '../../../../src/store/useStore';
 import { Button, Field, EmptyState } from '../../../../src/components/ui';
-import { colors, font, radius, shadow, spacing } from '../../../../src/theme';
+import { font, radius, shadow, spacing, Palette } from '../../../../src/theme';
+import { useTheme } from '../../../../src/theme/useTheme';
 import { daysBetween, fmtDate } from '../../../../src/lib/format';
 import { ItineraryType } from '../../../../src/lib/types';
 
@@ -20,6 +21,8 @@ const TYPE_META: Record<ItineraryType, { icon: any; color: string; label: string
 const TYPES: ItineraryType[] = ['activity', 'transport', 'food', 'stay', 'other'];
 
 export default function Itinerary() {
+  const { colors } = useTheme();
+  const styles = makeStyles(colors);
   const { id } = useLocalSearchParams<{ id: string }>();
   const trip = useStore((s) => s.trips.find((t) => t.id === id));
   const itinerary = useStore((s) => s.itinerary);
@@ -149,7 +152,7 @@ export default function Itinerary() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: Palette) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
   scroll: { padding: spacing.lg },
   dayHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, marginBottom: spacing.md },

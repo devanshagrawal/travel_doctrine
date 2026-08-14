@@ -4,7 +4,8 @@ import { useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useStore } from '../../../../src/store/useStore';
 import { EmptyState } from '../../../../src/components/ui';
-import { colors, font, radius, shadow, spacing } from '../../../../src/theme';
+import { font, radius, spacing, Palette } from '../../../../src/theme';
+import { useTheme } from '../../../../src/theme/useTheme';
 import { confirmAction } from '../../../../src/lib/confirm';
 import { TodoCategory } from '../../../../src/lib/types';
 
@@ -16,6 +17,8 @@ const CATS: { key: TodoCategory; label: string; icon: any; color: string; placeh
 ];
 
 export default function Todos() {
+  const { colors } = useTheme();
+  const styles = makeStyles(colors);
   const { id } = useLocalSearchParams<{ id: string }>();
   const trip = useStore((s) => s.trips.find((t) => t.id === id));
   const todos = useStore((s) => s.todos);
@@ -50,14 +53,17 @@ export default function Todos() {
       </View>
 
       {/* Category filter / target for new items */}
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.catRow}>
-        {CATS.map((c) => (
-          <Pressable key={c.key} onPress={() => setActive(c.key)} style={[styles.catChip, active === c.key && { backgroundColor: c.color, borderColor: c.color }]}>
-            <Ionicons name={c.icon} size={15} color={active === c.key ? colors.white : c.color} />
-            <Text style={[styles.catText, active === c.key && { color: colors.white }]}>{c.label}</Text>
-          </Pressable>
-        ))}
-      </ScrollView>
+      <View style={styles.catRow}>
+        {CATS.map((c) => {
+          const on = active === c.key;
+          return (
+            <Pressable key={c.key} onPress={() => setActive(c.key)} style={[styles.catChip, on && { backgroundColor: c.color + '22', borderColor: c.color }]}>
+              <Ionicons name={c.icon} size={13} color={c.color} />
+              <Text style={[styles.catText, { color: on ? c.color : colors.textMuted }]} numberOfLines={1}>{c.label}</Text>
+            </Pressable>
+          );
+        })}
+      </View>
 
       {/* Add row */}
       <View style={styles.addRow}>
@@ -112,7 +118,7 @@ export default function Todos() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: Palette) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
   progressWrap: { paddingHorizontal: spacing.lg, paddingTop: spacing.md, paddingBottom: spacing.sm, backgroundColor: colors.surface, borderBottomWidth: 1, borderBottomColor: colors.border },
   progressHead: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 },
@@ -120,9 +126,9 @@ const styles = StyleSheet.create({
   progressPct: { fontSize: font.size.sm, color: colors.primary, fontWeight: font.weight.bold },
   track: { height: 8, borderRadius: 4, backgroundColor: colors.surfaceAlt, overflow: 'hidden' },
   fill: { height: 8, borderRadius: 4, backgroundColor: colors.primary },
-  catRow: { paddingHorizontal: spacing.lg, paddingVertical: spacing.md, gap: 8 },
-  catChip: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 12, paddingVertical: 8, borderRadius: radius.pill, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, marginRight: 8 },
-  catText: { fontSize: font.size.sm, fontWeight: font.weight.semibold, color: colors.text },
+  catRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, paddingHorizontal: spacing.lg, paddingVertical: spacing.sm },
+  catChip: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 10, paddingVertical: 5, borderRadius: radius.pill, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border },
+  catText: { fontSize: 12.5, fontWeight: font.weight.semibold, color: colors.textMuted },
   addRow: { flexDirection: 'row', gap: spacing.sm, paddingHorizontal: spacing.lg, marginBottom: spacing.sm },
   input: { flex: 1, minWidth: 0, backgroundColor: colors.surface, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border, paddingHorizontal: spacing.md, minHeight: 46, fontSize: font.size.md, color: colors.text },
   addBtn: { width: 46, height: 46, borderRadius: radius.md, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center' },
@@ -130,9 +136,9 @@ const styles = StyleSheet.create({
   sectionHead: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: spacing.sm },
   sectionTitle: { fontSize: font.size.md, fontWeight: font.weight.bold, color: colors.text, flex: 1 },
   sectionCount: { fontSize: font.size.xs, color: colors.textMuted, fontWeight: font.weight.semibold },
-  todoRow: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.surface, borderRadius: radius.md, paddingHorizontal: spacing.md, paddingVertical: spacing.md, marginBottom: spacing.sm, borderWidth: 1, borderColor: colors.border, ...shadow.card },
-  checkArea: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 12 },
-  checkbox: { width: 22, height: 22, borderRadius: 6, borderWidth: 2, borderColor: colors.border, alignItems: 'center', justifyContent: 'center' },
+  todoRow: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.surface, borderRadius: radius.md, paddingHorizontal: spacing.md, paddingVertical: 10, marginBottom: 6, borderWidth: 1, borderColor: colors.border },
+  checkArea: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 11 },
+  checkbox: { width: 20, height: 20, borderRadius: 6, borderWidth: 2, borderColor: colors.border, alignItems: 'center', justifyContent: 'center' },
   todoText: { flex: 1, fontSize: font.size.md, color: colors.text },
   todoDone: { textDecorationLine: 'line-through', color: colors.textFaint },
 });

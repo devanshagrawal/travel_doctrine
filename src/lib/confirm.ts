@@ -17,3 +17,8 @@ export function confirmAction(
     destructive: opts?.destructive,
   });
 }
+
+// Show an informational dialog with a single "Got it" button (no action).
+export function notify(title: string, message: string) {
+  useConfirm.getState().show({ title, message, onConfirm: () => {}, infoOnly: true });
+}

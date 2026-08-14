@@ -1,10 +1,13 @@
 import React from 'react';
 import { Modal, Pressable, View, Text, Image, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, font, radius, spacing } from '../theme';
+import { font, radius, spacing, Palette } from '../theme';
+import { useTheme } from '../theme/useTheme';
 
 // Full-screen viewer for a booking proof / boarding pass image.
 export function ImageViewer({ uri, title, onClose }: { uri?: string; title?: string; onClose: () => void }) {
+  const { colors } = useTheme();
+  const styles = makeStyles(colors);
   return (
     <Modal visible={!!uri} transparent animationType="fade" onRequestClose={onClose}>
       <View style={styles.backdrop}>
@@ -22,7 +25,7 @@ export function ImageViewer({ uri, title, onClose }: { uri?: string; title?: str
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: Palette) => StyleSheet.create({
   backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.9)' },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: spacing.lg, paddingTop: 52, paddingBottom: spacing.md },
   title: { flex: 1, color: colors.white, fontSize: font.size.md, fontWeight: font.weight.semibold },

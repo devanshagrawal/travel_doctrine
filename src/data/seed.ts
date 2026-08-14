@@ -1,5 +1,6 @@
 import {
   BudgetCategory,
+  Collaborator,
   Expense,
   Flight,
   Hotel,
@@ -151,6 +152,18 @@ export const seedHotels: Hotel[] = [
     address: 'Jl. Raya Sanggingan, Ubud', checkIn: '2026-08-08', checkOut: '2026-08-14',
     confirmationNo: 'AIRBNB-7781', pricePerNight: 90,
   },
+];
+
+export const seedCollaborators: Collaborator[] = [
+  // The demo user owns every seed trip.
+  { id: 'co_j_me', tripId: 'trip_japan', name: seedUser.fullName, email: seedUser.email, avatarColor: seedUser.avatarColor, role: 'owner', isMe: true },
+  { id: 'co_j_1', tripId: 'trip_japan', name: 'Aisha Khan', email: 'aisha.khan@gmail.com', avatarColor: '#0D9488', role: 'editor' },
+  { id: 'co_j_2', tripId: 'trip_japan', name: 'Rohan Mehta', email: 'rohan.m@outlook.com', avatarColor: '#9333EA', role: 'editor' },
+
+  { id: 'co_b_me', tripId: 'trip_bali', name: seedUser.fullName, email: seedUser.email, avatarColor: seedUser.avatarColor, role: 'owner', isMe: true },
+  { id: 'co_b_1', tripId: 'trip_bali', name: 'Sara Lin', email: 'sara.lin@gmail.com', avatarColor: '#E11D48', role: 'editor' },
+
+  { id: 'co_p_me', tripId: 'trip_paris', name: seedUser.fullName, email: seedUser.email, avatarColor: seedUser.avatarColor, role: 'owner', isMe: true },
 ];
 
 export const seedTodos: TodoItem[] = [

@@ -10,10 +10,13 @@ import {
   ViewStyle,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, font, radius, shadow, spacing } from '../theme';
+import { font, radius, shadow, spacing, Palette } from '../theme';
+import { useTheme } from '../theme/useTheme';
 
 // ---------- Card ----------
 export function Card({ children, style, padded = true }: { children: React.ReactNode; style?: ViewStyle; padded?: boolean }) {
+  const { colors } = useTheme();
+  const styles = makeStyles(colors);
   return <View style={[styles.card, padded && { padding: spacing.lg }, style]}>{children}</View>;
 }
 
@@ -38,11 +41,13 @@ export function Button({
   style?: ViewStyle;
   full?: boolean;
 }) {
+  const { colors } = useTheme();
+  const styles = makeStyles(colors);
   const isPrimary = variant === 'primary';
   const isDanger = variant === 'danger';
   const bg =
     variant === 'ghost' ? 'transparent' : isDanger ? colors.dangerSoft : isPrimary ? colors.primary : colors.surfaceAlt;
-  const fg = isPrimary ? colors.white : isDanger ? colors.danger : colors.text;
+  const fg = isPrimary ? '#FCF7EE' : isDanger ? colors.danger : colors.text;
   return (
     <Pressable
       onPress={onPress}
@@ -74,11 +79,13 @@ export function Field({
   style,
   ...props
 }: TextInputProps & { label?: string; icon?: keyof typeof Ionicons.glyphMap }) {
+  const { colors } = useTheme();
+  const styles = makeStyles(colors);
   const [focused, setFocused] = React.useState(false);
   return (
     <View style={{ marginBottom: spacing.md }}>
       {label && <Text style={styles.fieldLabel}>{label}</Text>}
-      <View style={[styles.fieldWrap, focused && { borderColor: colors.primary, backgroundColor: colors.white }]}>
+      <View style={[styles.fieldWrap, focused && { borderColor: colors.primary, backgroundColor: colors.surface }]}>
         {icon && <Ionicons name={icon} size={18} color={colors.textFaint} style={{ marginRight: 8 }} />}
         <TextInput
           placeholderTextColor={colors.textFaint}
@@ -94,6 +101,8 @@ export function Field({
 
 // ---------- Pill / badge ----------
 export function Pill({ label, tone = 'neutral', icon }: { label: string; tone?: 'neutral' | 'primary' | 'success' | 'warning' | 'danger'; icon?: keyof typeof Ionicons.glyphMap }) {
+  const { colors } = useTheme();
+  const styles = makeStyles(colors);
   const map = {
     neutral: { bg: colors.surfaceAlt, fg: colors.textMuted },
     primary: { bg: colors.primarySoft, fg: colors.primary },
@@ -111,6 +120,8 @@ export function Pill({ label, tone = 'neutral', icon }: { label: string; tone?: 
 
 // ---------- Section header ----------
 export function SectionHeader({ title, action, onAction }: { title: string; action?: string; onAction?: () => void }) {
+  const { colors } = useTheme();
+  const styles = makeStyles(colors);
   return (
     <View style={styles.sectionHeader}>
       <Text style={styles.sectionTitle}>{title}</Text>
@@ -125,6 +136,8 @@ export function SectionHeader({ title, action, onAction }: { title: string; acti
 
 // ---------- Empty state ----------
 export function EmptyState({ icon, title, subtitle, cta, onCta }: { icon: keyof typeof Ionicons.glyphMap; title: string; subtitle?: string; cta?: string; onCta?: () => void }) {
+  const { colors } = useTheme();
+  const styles = makeStyles(colors);
   return (
     <View style={styles.empty}>
       <View style={styles.emptyIcon}>
@@ -138,15 +151,16 @@ export function EmptyState({ icon, title, subtitle, cta, onCta }: { icon: keyof 
 }
 
 // ---------- Icon in a soft circle ----------
-export function IconCircle({ icon, color = colors.primary, bg, size = 40 }: { icon: keyof typeof Ionicons.glyphMap; color?: string; bg?: string; size?: number }) {
+export function IconCircle({ icon, color, bg, size = 40 }: { icon: keyof typeof Ionicons.glyphMap; color?: string; bg?: string; size?: number }) {
+  const { colors } = useTheme();
   return (
     <View style={{ width: size, height: size, borderRadius: size / 2, alignItems: 'center', justifyContent: 'center', backgroundColor: bg || colors.primarySoft }}>
-      <Ionicons name={icon} size={size * 0.5} color={color} />
+      <Ionicons name={icon} size={size * 0.5} color={color || colors.primary} />
     </View>
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: Palette) => StyleSheet.create({
   card: {
     backgroundColor: colors.surface,
     borderRadius: radius.lg,

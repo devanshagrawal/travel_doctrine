@@ -6,7 +6,8 @@ import { Ionicons } from '@expo/vector-icons';
 import dayjs from 'dayjs';
 import { useStore } from '../../../../src/store/useStore';
 import { Button, Field, EmptyState, Pill } from '../../../../src/components/ui';
-import { colors, font, radius, shadow, spacing } from '../../../../src/theme';
+import { font, radius, shadow, spacing, Palette } from '../../../../src/theme';
+import { useTheme } from '../../../../src/theme/useTheme';
 import { fmtDate, fmtTime } from '../../../../src/lib/format';
 import { findCategoryId } from '../../../../src/lib/selectors';
 import { formatMoney } from '../../../../src/lib/currency';
@@ -15,6 +16,8 @@ import { ImageViewer } from '../../../../src/components/ImageViewer';
 import { Flight } from '../../../../src/lib/types';
 
 export default function Flights() {
+  const { colors } = useTheme();
+  const styles = makeStyles(colors);
   const { id } = useLocalSearchParams<{ id: string }>();
   const trip = useStore((s) => s.trips.find((t) => t.id === id));
   const flights = useStore((s) => s.flights);
@@ -277,6 +280,8 @@ export default function Flights() {
 }
 
 function UploadTile({ label, hint, uri, onPress }: { label: string; hint?: string; uri?: string; onPress: () => void }) {
+  const { colors } = useTheme();
+  const styles = makeStyles(colors);
   return (
     <View style={{ flex: 1, marginBottom: spacing.md }}>
       <Text style={styles.uploadLabel}>{label}{hint ? ` · ${hint}` : ''}</Text>
@@ -294,7 +299,7 @@ function UploadTile({ label, hint, uri, onPress }: { label: string; hint?: strin
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: Palette) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
   scroll: { padding: spacing.lg },
   ticket: { backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.lg, marginBottom: spacing.lg, borderWidth: 1, borderColor: colors.border, ...shadow.card },

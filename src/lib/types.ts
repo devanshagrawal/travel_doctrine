@@ -35,6 +35,8 @@ export interface BudgetCategory {
   icon: string; // ionicons name
 }
 
+export type SplitType = 'none' | 'equal';
+
 export interface Expense {
   id: string;
   tripId: string;
@@ -43,8 +45,32 @@ export interface Expense {
   currency: CurrencyCode;
   description: string;
   spentAt: string; // ISO date
-  paidBy?: string;
+  paidBy?: string; // legacy display label
+  paidById?: string; // collaborator id who paid (for splitting)
+  splitType?: SplitType; // 'equal' = shared among splitWith; else personal
+  splitWith?: string[]; // collaborator ids sharing the cost equally
+  paidFrom?: 'regular' | 'cash'; // 'cash' draws the cash wallet & isn't re-counted (Model A)
   sourceId?: string; // if auto-created from a flight/hotel, that record's id
+}
+
+// A foreign-cash pool for a trip. You "load" cash (counted as spent then),
+// and spending from it draws the balance down without re-counting (Model A).
+export interface CashWallet {
+  id: string;
+  tripId: string;
+  currency: CurrencyCode;
+  balance: number; // remaining cash in `currency`
+  loaded: number; // total ever loaded
+}
+
+// A recorded payoff between two people to settle group balances.
+export interface Settlement {
+  id: string;
+  tripId: string;
+  fromId: string; // collaborator who paid
+  toId: string; // collaborator who received
+  amount: number; // in trip base currency
+  createdAt: string;
 }
 
 export type DocumentType = 'passport' | 'id' | 'visa' | 'insurance' | 'other';
@@ -105,6 +131,20 @@ export interface Hotel {
   pricePerNight?: number;
 }
 
+export type CollaboratorRole = 'owner' | 'editor';
+
+// A person on a trip. Modelled as its own list keyed by tripId (like a
+// `trip_collaborators` join table) so it maps cleanly onto Supabase later.
+export interface Collaborator {
+  id: string;
+  tripId: string;
+  name: string;
+  email: string;
+  avatarColor: string;
+  role: CollaboratorRole;
+  isMe?: boolean; // marks the current signed-in user's own row
+}
+
 export interface Trip {
   id: string;
   name: string;
@@ -116,4 +156,5 @@ export interface Trip {
   coverColor: string; // gradient seed for the cover
   coverImage?: string; // optional user-picked cover photo (local URI)
   emoji: string;
+  completedAt?: string | null; // ISO timestamp — set when manually marked complete
 }
