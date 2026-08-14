@@ -38,3 +38,30 @@ export async function listMembers(tripId: string): Promise<Collaborator[]> {
   if (error) throw error;
   return (data as MemberRow[]).map((r) => rowToCollaborator(r, meId));
 }
+
+// Avatar colours assigned to invited collaborators in order (matches the prototype).
+const CREW_COLORS = ['#0D9488', '#9333EA', '#E11D48', '#0EA5E9', '#CA8A04', '#16A34A', '#F97316'];
+
+// Invite someone by email. user_id stays null until they sign in and
+// claim_invites() links the row to their account (see AuthProvider).
+export async function inviteMember(tripId: string, name: string, email: string): Promise<void> {
+  const { count } = await supabase
+    .from('trip_members')
+    .select('*', { count: 'exact', head: true })
+    .eq('trip_id', tripId);
+  const color = CREW_COLORS[(count ?? 0) % CREW_COLORS.length];
+  const { error } = await supabase.from('trip_members').insert({
+    trip_id: tripId,
+    user_id: null,
+    name: name.trim() || email.trim().split('@')[0],
+    email: email.trim(),
+    avatar_color: color,
+    role: 'editor',
+  });
+  if (error) throw error;
+}
+
+export async function removeMember(id: string): Promise<void> {
+  const { error } = await supabase.from('trip_members').delete().eq('id', id);
+  if (error) throw error;
+}

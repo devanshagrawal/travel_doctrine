@@ -41,6 +41,20 @@ export function useSettlements(tripId: string) {
 export function useMembers(tripId: string) {
   return useQuery({ queryKey: keys.members(tripId), queryFn: () => members.listMembers(tripId), enabled: !!tripId });
 }
+export function useInviteMember(tripId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ name, email }: { name: string; email: string }) => members.inviteMember(tripId, name, email),
+    onSuccess: () => qc.invalidateQueries({ queryKey: keys.members(tripId) }),
+  });
+}
+export function useRemoveMember(tripId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => members.removeMember(id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: keys.members(tripId) }),
+  });
+}
 
 // ---- mutations ----
 export function useAddExpense(tripId: string) {
