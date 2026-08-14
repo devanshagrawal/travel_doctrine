@@ -3,8 +3,9 @@ import { View, Text, StyleSheet, ScrollView, Pressable, Modal } from 'react-nati
 import { useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import dayjs from 'dayjs';
-import { confirmAction } from '../../../../src/lib/confirm';
-import { useStore } from '../../../../src/store/useStore';
+import { confirmAction, notify } from '../../../../src/lib/confirm';
+import { useTrip } from '../../../../src/hooks/useTrips';
+import { useItinerary, useAddItineraryItem, useDeleteItineraryItem } from '../../../../src/hooks/useTripData';
 import { Button, Field, EmptyState } from '../../../../src/components/ui';
 import { font, radius, shadow, spacing, Palette } from '../../../../src/theme';
 import { useTheme } from '../../../../src/theme/useTheme';
@@ -24,10 +25,10 @@ export default function Itinerary() {
   const { colors } = useTheme();
   const styles = makeStyles(colors);
   const { id } = useLocalSearchParams<{ id: string }>();
-  const trip = useStore((s) => s.trips.find((t) => t.id === id));
-  const itinerary = useStore((s) => s.itinerary);
-  const addItem = useStore((s) => s.addItineraryItem);
-  const deleteItem = useStore((s) => s.deleteItineraryItem);
+  const { data: trip } = useTrip(id);
+  const { data: itinerary = [] } = useItinerary(id);
+  const addItem = useAddItineraryItem(id);
+  const deleteItem = useDeleteItineraryItem(id);
 
   const [adding, setAdding] = React.useState(false);
   const [dayDate, setDayDate] = React.useState('');
@@ -41,13 +42,17 @@ export default function Itinerary() {
   const items = itinerary.filter((i) => i.tripId === trip.id);
 
   const openAdd = (d?: string) => { setDayDate(d || days[0]); setTime(''); setTitle(''); setLocation(''); setType('activity'); setAdding(true); };
-  const save = () => {
-    if (!title.trim() || !dayDate) return;
-    addItem({ tripId: trip.id, dayDate, time: time.trim() || undefined, title: title.trim(), location: location.trim() || undefined, type });
-    setAdding(false);
+  const save = async () => {
+    if (!title.trim() || !dayDate || addItem.isPending) return;
+    try {
+      await addItem.mutateAsync({ tripId: trip.id, dayDate, time: time.trim() || undefined, title: title.trim(), location: location.trim() || undefined, type });
+      setAdding(false);
+    } catch (e: any) {
+      notify('Could not add item', e?.message ?? 'Please try again.');
+    }
   };
   const confirmDelete = (iid: string, label: string) =>
-    confirmAction('Delete item', `Remove "${label}"?`, () => deleteItem(iid));
+    confirmAction('Delete item', `Remove "${label}"?`, () => deleteItem.mutate(iid));
 
   const hasAny = items.length > 0;
 
@@ -144,7 +149,7 @@ export default function Itinerary() {
               </View>
             </View>
             <Field label="Location (optional)" icon="location-outline" placeholder="Where?" value={location} onChangeText={setLocation} />
-            <Button label="Add to day" onPress={save} disabled={!title.trim() || !dayDate} full style={{ marginTop: spacing.sm, marginBottom: spacing.xl }} />
+            <Button label={addItem.isPending ? 'Adding…' : 'Add to day'} onPress={save} disabled={!title.trim() || !dayDate || addItem.isPending} full style={{ marginTop: spacing.sm, marginBottom: spacing.xl }} />
           </ScrollView>
         </View>
       </Modal>

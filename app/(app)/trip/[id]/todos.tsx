@@ -2,7 +2,8 @@ import React from 'react';
 import { View, Text, StyleSheet, ScrollView, Pressable, TextInput } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { useStore } from '../../../../src/store/useStore';
+import { useTrip } from '../../../../src/hooks/useTrips';
+import { useTodos, useAddTodo, useSetTodoDone, useDeleteTodo } from '../../../../src/hooks/useTripData';
 import { EmptyState } from '../../../../src/components/ui';
 import { font, radius, spacing, Palette } from '../../../../src/theme';
 import { useTheme } from '../../../../src/theme/useTheme';
@@ -20,11 +21,11 @@ export default function Todos() {
   const { colors } = useTheme();
   const styles = makeStyles(colors);
   const { id } = useLocalSearchParams<{ id: string }>();
-  const trip = useStore((s) => s.trips.find((t) => t.id === id));
-  const todos = useStore((s) => s.todos);
-  const addTodo = useStore((s) => s.addTodo);
-  const toggleTodo = useStore((s) => s.toggleTodo);
-  const deleteTodo = useStore((s) => s.deleteTodo);
+  const { data: trip } = useTrip(id);
+  const { data: todos = [] } = useTodos(id);
+  const addTodo = useAddTodo(id);
+  const setTodoDone = useSetTodoDone(id);
+  const deleteTodo = useDeleteTodo(id);
 
   const [active, setActive] = React.useState<TodoCategory>('todo');
   const [text, setText] = React.useState('');
@@ -34,8 +35,8 @@ export default function Todos() {
   const done = list.filter((t) => t.done).length;
 
   const add = () => {
-    if (!text.trim()) return;
-    addTodo({ tripId: trip.id, title: text.trim(), category: active });
+    if (!text.trim() || addTodo.isPending) return;
+    addTodo.mutate({ tripId: trip.id, title: text.trim(), category: active });
     setText('');
   };
 
@@ -97,13 +98,13 @@ export default function Todos() {
                 </View>
                 {items.map((t) => (
                   <View key={t.id} style={styles.todoRow}>
-                    <Pressable style={styles.checkArea} onPress={() => toggleTodo(t.id)}>
+                    <Pressable style={styles.checkArea} onPress={() => setTodoDone.mutate({ id: t.id, done: !t.done })}>
                       <View style={[styles.checkbox, t.done && { backgroundColor: c.color, borderColor: c.color }]}>
                         {t.done && <Ionicons name="checkmark" size={14} color={colors.white} />}
                       </View>
                       <Text style={[styles.todoText, t.done && styles.todoDone]}>{t.title}</Text>
                     </Pressable>
-                    <Pressable hitSlop={8} onPress={() => confirmAction('Delete item', `Remove "${t.title}"?`, () => deleteTodo(t.id))}>
+                    <Pressable hitSlop={8} onPress={() => confirmAction('Delete item', `Remove "${t.title}"?`, () => deleteTodo.mutate(t.id))}>
                       <Ionicons name="close" size={18} color={colors.textFaint} />
                     </Pressable>
                   </View>
