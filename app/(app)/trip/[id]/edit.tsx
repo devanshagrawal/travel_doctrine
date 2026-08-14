@@ -1,12 +1,13 @@
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView, Pressable, KeyboardAvoidingView, Platform, Image } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Pressable, KeyboardAvoidingView, Platform, Image, ActivityIndicator } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 import { Ionicons } from '@expo/vector-icons';
-import { useStore } from '../../../../src/store/useStore';
+import { useTrip, useUpdateTrip, useDeleteTrip } from '../../../../src/hooks/useTrips';
+import { Trip } from '../../../../src/lib/types';
 import { Button, Field } from '../../../../src/components/ui';
 import { CURRENCIES } from '../../../../src/lib/currency';
-import { confirmAction } from '../../../../src/lib/confirm';
+import { confirmAction, notify } from '../../../../src/lib/confirm';
 import { font, radius, spacing, Palette } from '../../../../src/theme';
 import { useTheme } from '../../../../src/theme/useTheme';
 
@@ -15,23 +16,16 @@ const COVERS = ['#2563EB', '#E11D48', '#0D9488', '#9333EA', '#F97316', '#0EA5E9'
 
 export default function EditTrip() {
   const { colors } = useTheme();
-  const styles = makeStyles(colors);
-  const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
-  const trip = useStore((s) => s.trips.find((t) => t.id === id));
-  const updateTrip = useStore((s) => s.updateTrip);
-  const deleteTrip = useStore((s) => s.deleteTrip);
+  const { data: trip, isLoading } = useTrip(id);
 
-  const [name, setName] = React.useState(trip?.name ?? '');
-  const [destination, setDestination] = React.useState(trip?.destination ?? '');
-  const [start, setStart] = React.useState(trip?.startDate ?? '');
-  const [end, setEnd] = React.useState(trip?.endDate ?? '');
-  const [budget, setBudget] = React.useState(trip ? String(trip.totalBudget) : '');
-  const [currency, setCurrency] = React.useState(trip?.baseCurrency ?? 'USD');
-  const [emoji, setEmoji] = React.useState(trip?.emoji ?? '🗼');
-  const [cover, setCover] = React.useState(trip?.coverColor ?? COVERS[0]);
-  const [coverImage, setCoverImage] = React.useState<string | undefined>(trip?.coverImage);
-
+  if (isLoading) {
+    return (
+      <View style={{ flex: 1, backgroundColor: colors.bg, alignItems: 'center', justifyContent: 'center' }}>
+        <ActivityIndicator color={colors.primary} />
+      </View>
+    );
+  }
   if (!trip) {
     return (
       <View style={{ flex: 1, backgroundColor: colors.bg, padding: spacing.xl }}>
@@ -39,6 +33,25 @@ export default function EditTrip() {
       </View>
     );
   }
+  return <EditForm trip={trip} />;
+}
+
+function EditForm({ trip }: { trip: Trip }) {
+  const { colors } = useTheme();
+  const styles = makeStyles(colors);
+  const router = useRouter();
+  const updateTrip = useUpdateTrip();
+  const deleteTrip = useDeleteTrip();
+
+  const [name, setName] = React.useState(trip.name);
+  const [destination, setDestination] = React.useState(trip.destination);
+  const [start, setStart] = React.useState(trip.startDate);
+  const [end, setEnd] = React.useState(trip.endDate);
+  const [budget, setBudget] = React.useState(String(trip.totalBudget));
+  const [currency, setCurrency] = React.useState(trip.baseCurrency);
+  const [emoji, setEmoji] = React.useState(trip.emoji);
+  const [cover, setCover] = React.useState(trip.coverColor);
+  const [coverImage, setCoverImage] = React.useState<string | undefined>(trip.coverImage);
 
   const canSave = name.trim().length > 0 && destination.trim().length > 0;
 
@@ -47,26 +60,37 @@ export default function EditTrip() {
     if (!res.canceled) setCoverImage(res.assets[0].uri);
   };
 
-  const onSave = () => {
-    if (!canSave) return;
-    updateTrip(trip.id, {
-      name: name.trim(),
-      destination: destination.trim(),
-      startDate: start,
-      endDate: end,
-      baseCurrency: currency,
-      totalBudget: Number(budget) || 0,
-      coverColor: cover,
-      coverImage,
-      emoji,
-    });
-    router.back();
+  const onSave = async () => {
+    if (!canSave || updateTrip.isPending) return;
+    try {
+      await updateTrip.mutateAsync({
+        id: trip.id,
+        patch: {
+          name: name.trim(),
+          destination: destination.trim(),
+          startDate: start,
+          endDate: end,
+          baseCurrency: currency,
+          totalBudget: Number(budget) || 0,
+          coverColor: cover,
+          coverImage,
+          emoji,
+        },
+      });
+      router.back();
+    } catch (e: any) {
+      notify('Could not save', e?.message ?? 'Please try again.');
+    }
   };
 
   const onDelete = () => {
-    confirmAction('Delete trip', `Delete "${trip.name}" and everything in it? This can't be undone.`, () => {
-      deleteTrip(trip.id);
-      router.replace('/(app)/(tabs)');
+    confirmAction('Delete trip', `Delete "${trip.name}" and everything in it? This can't be undone.`, async () => {
+      try {
+        await deleteTrip.mutateAsync(trip.id);
+        router.replace('/(app)/(tabs)');
+      } catch (e: any) {
+        notify('Could not delete', e?.message ?? 'Please try again.');
+      }
     });
   };
 
@@ -136,7 +160,7 @@ export default function EditTrip() {
           ))}
         </View>
 
-        <Button label="Save changes" onPress={onSave} disabled={!canSave} full style={{ marginTop: spacing.lg }} />
+        <Button label={updateTrip.isPending ? 'Saving…' : 'Save changes'} onPress={onSave} disabled={!canSave || updateTrip.isPending} full style={{ marginTop: spacing.lg }} />
         <Button label="Delete trip" icon="trash-outline" variant="danger" onPress={onDelete} full style={{ marginTop: spacing.sm }} />
         <View style={{ height: 40 }} />
       </ScrollView>

@@ -1,8 +1,9 @@
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView, Pressable } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Pressable, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useStore } from '../../../src/store/useStore';
+import { useTrips } from '../../../src/hooks/useTrips';
 import { useTheme } from '../../../src/theme/useTheme';
 import { Masthead } from '../../../src/components/Masthead';
 import { TripCover } from '../../../src/components/TripCover';
@@ -24,8 +25,8 @@ export default function TripsHome() {
   const router = useRouter();
   const { colors, spacing, shadow } = useTheme();
   const user = useStore((s) => s.user);
-  const trips = useStore((s) => s.trips);
   const expenses = useStore((s) => s.expenses);
+  const { data: trips = [], isLoading, error } = useTrips();
 
   const upcoming = trips.filter((t) => !isTripDone(t));
   const past = trips.filter((t) => isTripDone(t));
@@ -36,7 +37,13 @@ export default function TripsHome() {
       <Masthead eyebrow="Your journeys" title={`${greeting()}, ${firstName}`} />
 
       <ScrollView contentContainerStyle={{ padding: spacing.lg, paddingBottom: 96 }} showsVerticalScrollIndicator={false}>
-        {trips.length === 0 ? (
+        {isLoading ? (
+          <View style={{ paddingTop: 80, alignItems: 'center' }}>
+            <ActivityIndicator color={colors.primary} />
+          </View>
+        ) : error ? (
+          <EmptyState icon="cloud-offline-outline" title="Couldn't load your trips" subtitle={(error as Error).message} />
+        ) : trips.length === 0 ? (
           <EmptyState icon="airplane-outline" title="No trips yet" subtitle="Create your first trip to start planning itineraries, budgets and documents." cta="Plan a trip" onCta={() => router.push('/(app)/trip/new')} />
         ) : (
           <>

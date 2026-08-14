@@ -4,7 +4,8 @@ import { useRouter } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 import { Ionicons } from '@expo/vector-icons';
 import dayjs from 'dayjs';
-import { useStore } from '../../../src/store/useStore';
+import { useCreateTrip } from '../../../src/hooks/useTrips';
+import { notify } from '../../../src/lib/confirm';
 import { Button, Field } from '../../../src/components/ui';
 import { CURRENCIES } from '../../../src/lib/currency';
 import { font, radius, spacing, Palette } from '../../../src/theme';
@@ -17,7 +18,7 @@ export default function NewTrip() {
   const { colors } = useTheme();
   const styles = makeStyles(colors);
   const router = useRouter();
-  const addTrip = useStore((s) => s.addTrip);
+  const createTrip = useCreateTrip();
 
   const [name, setName] = React.useState('');
   const [destination, setDestination] = React.useState('');
@@ -41,20 +42,24 @@ export default function NewTrip() {
     if (!res.canceled) setCoverImage(res.assets[0].uri);
   };
 
-  const onSave = () => {
-    if (!canSave) return;
-    const id = addTrip({
-      name: name.trim(),
-      destination: destination.trim(),
-      startDate: start,
-      endDate: end,
-      baseCurrency: currency,
-      totalBudget: Number(budget) || 0,
-      coverColor: cover,
-      coverImage,
-      emoji,
-    });
-    router.replace(`/(app)/trip/${id}`);
+  const onSave = async () => {
+    if (!canSave || createTrip.isPending) return;
+    try {
+      const trip = await createTrip.mutateAsync({
+        name: name.trim(),
+        destination: destination.trim(),
+        startDate: start,
+        endDate: end,
+        baseCurrency: currency,
+        totalBudget: Number(budget) || 0,
+        coverColor: cover,
+        coverImage,
+        emoji,
+      });
+      router.replace(`/(app)/trip/${trip.id}`);
+    } catch (e: any) {
+      notify('Could not create trip', e?.message ?? 'Please try again.');
+    }
   };
 
   return (
@@ -127,7 +132,7 @@ export default function NewTrip() {
           ))}
         </View>
 
-        <Button label="Create trip" onPress={onSave} disabled={!canSave} full style={{ marginTop: spacing.lg }} />
+        <Button label={createTrip.isPending ? 'Creating…' : 'Create trip'} onPress={onSave} disabled={!canSave || createTrip.isPending} full style={{ marginTop: spacing.lg }} />
         <View style={{ height: 40 }} />
       </ScrollView>
     </KeyboardAvoidingView>

@@ -1,9 +1,10 @@
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView, Pressable } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Pressable, ActivityIndicator } from 'react-native';
 import { useRouter, useLocalSearchParams, Stack } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useStore } from '../../../../src/store/useStore';
+import { useTrip, useSetTripCompleted } from '../../../../src/hooks/useTrips';
 import { TripCover } from '../../../../src/components/TripCover';
 import { BudgetMeter } from '../../../../src/components/BudgetMeter';
 import { AvatarStack } from '../../../../src/components/Avatar';
@@ -20,7 +21,7 @@ export default function TripOverview() {
   const { colors } = useTheme();
   const styles = makeStyles(colors);
   const { id } = useLocalSearchParams<{ id: string }>();
-  const trip = useStore((s) => s.trips.find((t) => t.id === id));
+  const { data: trip, isLoading } = useTrip(id);
   const expenses = useStore((s) => s.expenses);
   const itinerary = useStore((s) => s.itinerary);
   const documents = useStore((s) => s.documents);
@@ -29,8 +30,17 @@ export default function TripOverview() {
   const todos = useStore((s) => s.todos);
   const collaborators = useStore((s) => s.collaborators);
   const budgetCategories = useStore((s) => s.budgetCategories);
-  const setTripCompleted = useStore((s) => s.setTripCompleted);
+  const setCompleted = useSetTripCompleted();
 
+  if (isLoading) {
+    return (
+      <SafeAreaView style={styles.safe}>
+        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+          <ActivityIndicator color={colors.primary} />
+        </View>
+      </SafeAreaView>
+    );
+  }
   if (!trip) {
     return (
       <SafeAreaView style={styles.safe}>
@@ -122,7 +132,7 @@ export default function TripOverview() {
           <Pressable style={styles.crewCard} onPress={() => router.push(`/(app)/trip/${trip.id}/share`)}>
             <AvatarStack people={crew} size={34} />
             <View style={{ flex: 1, marginLeft: spacing.md }}>
-              <Text style={styles.crewTitle}>{crew.length === 1 ? 'Just you' : `Shared with ${crew.length - 1} ${crew.length - 1 === 1 ? 'other' : 'others'}`}</Text>
+              <Text style={styles.crewTitle}>{crew.length <= 1 ? 'Just you' : `Shared with ${crew.length - 1} ${crew.length - 1 === 1 ? 'other' : 'others'}`}</Text>
               <Text style={styles.crewSub}>Everyone here can add & edit</Text>
             </View>
             <View style={[styles.crewBtn, { backgroundColor: colors.primarySoft }]}>
@@ -161,7 +171,7 @@ export default function TripOverview() {
                 {topCategory && <Recap label="Top spend" value={topCategory.name} />}
               </View>
               {trip.completedAt && (
-                <Pressable style={styles.reopenBtn} onPress={() => setTripCompleted(trip.id, false)}>
+                <Pressable style={styles.reopenBtn} onPress={() => setCompleted.mutate({ id: trip.id, completed: false })}>
                   <Ionicons name="refresh" size={15} color={colors.textMuted} />
                   <Text style={styles.reopenText}>Reopen trip</Text>
                 </Pressable>
@@ -170,7 +180,7 @@ export default function TripOverview() {
           ) : (
             <Pressable
               style={styles.completeBtn}
-              onPress={() => confirmAction('Complete trip', `Mark "${trip.name}" as completed? It'll move to your past trips.`, () => setTripCompleted(trip.id, true), { confirmLabel: 'Complete', destructive: false })}
+              onPress={() => confirmAction('Complete trip', `Mark "${trip.name}" as completed? It'll move to your past trips.`, () => setCompleted.mutate({ id: trip.id, completed: true }), { confirmLabel: 'Complete', destructive: false })}
             >
               <Ionicons name="checkmark-done" size={18} color={colors.primary} />
               <Text style={styles.completeText}>Mark trip as completed</Text>
