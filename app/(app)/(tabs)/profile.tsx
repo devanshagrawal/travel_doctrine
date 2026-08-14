@@ -5,6 +5,7 @@ import { confirmAction } from '../../../src/lib/confirm';
 import { Masthead } from '../../../src/components/Masthead';
 import { Ionicons } from '@expo/vector-icons';
 import { useStore } from '../../../src/store/useStore';
+import { useAuth } from '../../../src/lib/auth';
 import { Card, Button, Field } from '../../../src/components/ui';
 import { CURRENCIES, currencyMeta } from '../../../src/lib/currency';
 import { font, radius, shadow, spacing, Palette } from '../../../src/theme';
@@ -15,7 +16,7 @@ export default function Profile() {
   const { colors, mode, toggle } = useTheme();
   const styles = makeStyles(colors);
   const user = useStore((s) => s.user);
-  const logout = useStore((s) => s.logout);
+  const { signOut } = useAuth();
   const setHomeCurrency = useStore((s) => s.setHomeCurrency);
   const updateUser = useStore((s) => s.updateUser);
   const resetToSeed = useStore((s) => s.resetToSeed);
@@ -37,8 +38,8 @@ export default function Profile() {
   };
 
   const onLogout = () => {
-    confirmAction('Log out', 'Are you sure you want to log out?', () => {
-      logout();
+    confirmAction('Log out', 'Are you sure you want to log out?', async () => {
+      await signOut();
       router.replace('/(auth)/login');
     }, { confirmLabel: 'Log out' });
   };

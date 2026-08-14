@@ -2,27 +2,38 @@ import React from 'react';
 import { View, Text, StyleSheet, KeyboardAvoidingView, Platform, ScrollView, Pressable } from 'react-native';
 import { useRouter, Link } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useStore } from '../../src/store/useStore';
+import { Ionicons } from '@expo/vector-icons';
 import { Button, Field } from '../../src/components/ui';
 import { font, spacing, Palette } from '../../src/theme';
 import { useTheme } from '../../src/theme/useTheme';
+import { useAuth } from '../../src/lib/auth';
 
 export default function Login() {
   const { colors } = useTheme();
   const styles = makeStyles(colors);
   const router = useRouter();
-  const login = useStore((s) => s.login);
-  const loginAsDemo = useStore((s) => s.loginAsDemo);
+  const { signIn } = useAuth();
   const [email, setEmail] = React.useState('');
   const [password, setPassword] = React.useState('');
+  const [busy, setBusy] = React.useState(false);
+  const [error, setError] = React.useState<string | null>(null);
 
-  const onLogin = () => {
-    login(email.trim());
-    router.replace('/(app)/(tabs)');
-  };
-  const onDemo = () => {
-    loginAsDemo();
-    router.replace('/(app)/(tabs)');
+  const onLogin = async () => {
+    if (busy) return;
+    setError(null);
+    if (!email.trim() || !password) {
+      setError('Enter your email and password.');
+      return;
+    }
+    setBusy(true);
+    try {
+      await signIn(email.trim(), password);
+      router.replace('/(app)/(tabs)');
+    } catch (e: any) {
+      setError(e?.message ?? 'Could not log in. Please try again.');
+    } finally {
+      setBusy(false);
+    }
   };
 
   return (
@@ -37,14 +48,16 @@ export default function Login() {
 
           <View style={styles.form}>
             <Field label="Email" icon="mail-outline" placeholder="you@example.com" keyboardType="email-address" autoCapitalize="none" value={email} onChangeText={setEmail} />
-            <Field label="Password" icon="lock-closed-outline" placeholder="••••••••" secureTextEntry value={password} onChangeText={setPassword} />
+            <Field label="Password" icon="lock-closed-outline" placeholder="••••••••" secureTextEntry value={password} onChangeText={setPassword} onSubmitEditing={onLogin} />
 
-            <Pressable style={{ alignSelf: 'flex-end', marginBottom: spacing.md }}>
-              <Text style={styles.link}>Forgot password?</Text>
-            </Pressable>
+            {error ? (
+              <View style={styles.errorRow}>
+                <Ionicons name="alert-circle" size={14} color={colors.danger} />
+                <Text style={styles.errorText}>{error}</Text>
+              </View>
+            ) : null}
 
-            <Button label="Log in" onPress={onLogin} full />
-            <Button label="Continue as demo" variant="secondary" onPress={onDemo} full style={{ marginTop: spacing.sm }} />
+            <Button label={busy ? 'Logging in…' : 'Log in'} onPress={onLogin} full disabled={busy} style={{ marginTop: spacing.sm }} />
 
             <View style={styles.footer}>
               <Text style={styles.footerText}>New here? </Text>
@@ -72,4 +85,6 @@ const makeStyles = (colors: Palette) => StyleSheet.create({
   link: { color: colors.primary, fontWeight: font.weight.semibold, fontSize: font.size.sm },
   footer: { flexDirection: 'row', justifyContent: 'center', marginTop: spacing.xl },
   footerText: { color: colors.textMuted, fontSize: font.size.sm },
+  errorRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: spacing.sm },
+  errorText: { color: colors.danger, fontSize: font.size.sm, flex: 1 },
 });

@@ -1,11 +1,19 @@
 import { Redirect, Stack } from 'expo-router';
-import { useStore } from '../../src/store/useStore';
+import { View, ActivityIndicator } from 'react-native';
+import { useAuth } from '../../src/lib/auth';
 import { useTheme } from '../../src/theme/useTheme';
 
 export default function AppLayout() {
-  const isAuthed = useStore((s) => s.isAuthed);
+  const { session, loading } = useAuth();
   const { colors, fonts } = useTheme();
-  if (!isAuthed) return <Redirect href="/(auth)/login" />;
+  if (loading) {
+    return (
+      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.bg }}>
+        <ActivityIndicator color={colors.primary} />
+      </View>
+    );
+  }
+  if (!session) return <Redirect href="/(auth)/login" />;
 
   return (
     <Stack
