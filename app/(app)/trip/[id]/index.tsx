@@ -5,6 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useStore } from '../../../../src/store/useStore';
 import { useTrip, useSetTripCompleted } from '../../../../src/hooks/useTrips';
+import { useExpenses, useBudgetCategories, useMembers } from '../../../../src/hooks/useTripData';
 import { TripCover } from '../../../../src/components/TripCover';
 import { BudgetMeter } from '../../../../src/components/BudgetMeter';
 import { AvatarStack } from '../../../../src/components/Avatar';
@@ -22,14 +23,14 @@ export default function TripOverview() {
   const styles = makeStyles(colors);
   const { id } = useLocalSearchParams<{ id: string }>();
   const { data: trip, isLoading } = useTrip(id);
-  const expenses = useStore((s) => s.expenses);
+  const { data: expenses = [] } = useExpenses(id);
+  const { data: budgetCategories = [] } = useBudgetCategories(id);
+  const { data: collaborators = [] } = useMembers(id);
   const itinerary = useStore((s) => s.itinerary);
   const documents = useStore((s) => s.documents);
   const flights = useStore((s) => s.flights);
   const hotels = useStore((s) => s.hotels);
   const todos = useStore((s) => s.todos);
-  const collaborators = useStore((s) => s.collaborators);
-  const budgetCategories = useStore((s) => s.budgetCategories);
   const setCompleted = useSetTripCompleted();
 
   if (isLoading) {

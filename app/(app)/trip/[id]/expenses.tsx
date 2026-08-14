@@ -4,7 +4,17 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import dayjs from 'dayjs';
 import { confirmAction, notify } from '../../../../src/lib/confirm';
-import { useStore } from '../../../../src/store/useStore';
+import { useTrip } from '../../../../src/hooks/useTrips';
+import {
+  useExpenses,
+  useBudgetCategories,
+  useMembers,
+  useCashWallets,
+  useAddExpense,
+  useDeleteExpense,
+  useLoadCash,
+  useAdjustCash,
+} from '../../../../src/hooks/useTripData';
 import { Button, Field, EmptyState } from '../../../../src/components/ui';
 import { font, radius, shadow, spacing, Palette } from '../../../../src/theme';
 import { useTheme } from '../../../../src/theme/useTheme';
@@ -17,15 +27,15 @@ export default function Expenses() {
   const styles = makeStyles(colors);
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
-  const trip = useStore((s) => s.trips.find((t) => t.id === id));
-  const expenses = useStore((s) => s.expenses);
-  const categories = useStore((s) => s.budgetCategories);
-  const addExpense = useStore((s) => s.addExpense);
-  const deleteExpense = useStore((s) => s.deleteExpense);
-  const collaborators = useStore((s) => s.collaborators);
-  const cashWallets = useStore((s) => s.cashWallets);
-  const loadCash = useStore((s) => s.loadCash);
-  const adjustCash = useStore((s) => s.adjustCash);
+  const { data: trip } = useTrip(id);
+  const { data: expenses = [] } = useExpenses(id);
+  const { data: categories = [] } = useBudgetCategories(id);
+  const { data: collaborators = [] } = useMembers(id);
+  const { data: cashWallets = [] } = useCashWallets(id);
+  const addExpense = useAddExpense(id);
+  const deleteExpense = useDeleteExpense(id);
+  const loadCash = useLoadCash(id);
+  const adjustCash = useAdjustCash(id);
 
   const crew = collaborators.filter((c) => c.tripId === id);
   const me = crew.find((c) => c.isMe) ?? crew[0];
@@ -64,43 +74,55 @@ export default function Expenses() {
     setParticipants((p) => (p.includes(cid) ? p.filter((x) => x !== cid) : [...p, cid]));
 
   const reset = () => { setDesc(''); setAmount(''); setCurrency(trip.baseCurrency); setCategoryId(null); setSplitOn(false); setPaySource('regular'); setAdding(false); };
-  const save = () => {
-    if (!desc.trim() || !Number(amount)) return;
+  const save = async () => {
+    if (!desc.trim() || !Number(amount) || addExpense.isPending) return;
     const amt = Number(amount);
-    // Cash spend (Model A): draws the wallet, currency = wallet currency, not re-counted.
-    if (paySource === 'cash' && wallet) {
-      addExpense({ tripId: trip.id, categoryId, amount: amt, currency: wallet.currency, description: desc.trim(), spentAt: dayjs().format('YYYY-MM-DD'), paidBy: nameFor(me?.id), paidFrom: 'cash' });
-      adjustCash(wallet.id, -amt);
+    try {
+      // Cash spend (Model A): draws the wallet, currency = wallet currency, not re-counted.
+      if (paySource === 'cash' && wallet) {
+        await addExpense.mutateAsync({ tripId: trip.id, categoryId, amount: amt, currency: wallet.currency, description: desc.trim(), spentAt: dayjs().format('YYYY-MM-DD'), paidBy: nameFor(me?.id), paidFrom: 'cash' });
+        await adjustCash.mutateAsync({ walletId: wallet.id, delta: -amt });
+        reset();
+        return;
+      }
+      const shared = splitOn && canSplit && participants.length > 0;
+      await addExpense.mutateAsync({
+        tripId: trip.id,
+        categoryId,
+        amount: amt,
+        currency,
+        description: desc.trim(),
+        spentAt: dayjs().format('YYYY-MM-DD'),
+        paidBy: nameFor(paidById),
+        paidById: paidById ?? me?.id,
+        splitType: shared ? 'equal' : 'none',
+        splitWith: shared ? participants : undefined,
+        paidFrom: 'regular',
+      });
       reset();
-      return;
+    } catch (e: any) {
+      notify('Could not save expense', e?.message ?? 'Please try again.');
     }
-    const shared = splitOn && canSplit && participants.length > 0;
-    addExpense({
-      tripId: trip.id,
-      categoryId,
-      amount: amt,
-      currency,
-      description: desc.trim(),
-      spentAt: dayjs().format('YYYY-MM-DD'),
-      paidBy: nameFor(paidById),
-      paidById: paidById ?? me?.id,
-      splitType: shared ? 'equal' : 'none',
-      splitWith: shared ? participants : undefined,
-      paidFrom: 'regular',
-    });
-    reset();
   };
 
   const openLoadCash = () => { setCashCur(wallet?.currency ?? trip.baseCurrency); setCashAmt(''); setLoadingCash(true); };
-  const saveLoadCash = () => {
-    if (!Number(cashAmt)) return;
-    loadCash(trip.id, cashCur, Number(cashAmt));
-    setLoadingCash(false);
+  const saveLoadCash = async () => {
+    if (!Number(cashAmt) || loadCash.isPending) return;
+    try {
+      await loadCash.mutateAsync({ currency: cashCur, amount: Number(cashAmt) });
+      setLoadingCash(false);
+    } catch (e: any) {
+      notify('Could not add cash', e?.message ?? 'Please try again.');
+    }
   };
   const confirmDelete = (e: { id: string; description: string; paidFrom?: string; amount: number }) =>
-    confirmAction('Delete expense', `Remove "${e.description}"?`, () => {
-      deleteExpense(e.id);
-      if (e.paidFrom === 'cash' && wallet) adjustCash(wallet.id, e.amount); // refund the cash
+    confirmAction('Delete expense', `Remove "${e.description}"?`, async () => {
+      try {
+        await deleteExpense.mutateAsync(e.id);
+        if (e.paidFrom === 'cash' && wallet) await adjustCash.mutateAsync({ walletId: wallet.id, delta: e.amount }); // refund the cash
+      } catch (err: any) {
+        notify('Could not delete', err?.message ?? 'Please try again.');
+      }
     });
 
   const catFor = (cid: string | null) => tripCats.find((c) => c.id === cid);
@@ -319,7 +341,7 @@ export default function Expenses() {
               </>
             )}
 
-            <Button label="Save expense" onPress={save} disabled={!desc.trim() || !Number(amount) || (paySource === 'cash' && !!wallet && Number(amount) > wallet.balance)} full style={{ marginTop: spacing.md, marginBottom: spacing.xl }} />
+            <Button label={addExpense.isPending ? 'Saving…' : 'Save expense'} onPress={save} disabled={!desc.trim() || !Number(amount) || addExpense.isPending || (paySource === 'cash' && !!wallet && Number(amount) > wallet.balance)} full style={{ marginTop: spacing.md, marginBottom: spacing.xl }} />
           </ScrollView>
         </View>
       </Modal>
@@ -344,7 +366,7 @@ export default function Expenses() {
             {Number(cashAmt) > 0 && cashCur !== trip.baseCurrency && (
               <Text style={styles.convHint}>≈ {formatMoney(convert(Number(cashAmt), cashCur, trip.baseCurrency), trip.baseCurrency)} counted against budget</Text>
             )}
-            <Button label="Add cash" onPress={saveLoadCash} disabled={!Number(cashAmt)} full style={{ marginTop: spacing.md, marginBottom: spacing.xl }} />
+            <Button label={loadCash.isPending ? 'Adding…' : 'Add cash'} onPress={saveLoadCash} disabled={!Number(cashAmt) || loadCash.isPending} full style={{ marginTop: spacing.md, marginBottom: spacing.xl }} />
           </ScrollView>
         </View>
       </Modal>

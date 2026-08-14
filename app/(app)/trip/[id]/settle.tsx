@@ -2,7 +2,8 @@ import React from 'react';
 import { View, Text, StyleSheet, ScrollView, Pressable } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { useStore } from '../../../../src/store/useStore';
+import { useTrip } from '../../../../src/hooks/useTrips';
+import { useExpenses, useMembers, useSettlements, useAddSettlement } from '../../../../src/hooks/useTripData';
 import { useTheme } from '../../../../src/theme/useTheme';
 import { Avatar } from '../../../../src/components/Avatar';
 import { EmptyState } from '../../../../src/components/ui';
@@ -15,11 +16,11 @@ export default function Settle() {
   const { colors, fonts } = useTheme();
   const styles = makeStyles(colors);
   const { id } = useLocalSearchParams<{ id: string }>();
-  const trip = useStore((s) => s.trips.find((t) => t.id === id));
-  const expenses = useStore((s) => s.expenses);
-  const collaborators = useStore((s) => s.collaborators);
-  const settlements = useStore((s) => s.settlements);
-  const addSettlement = useStore((s) => s.addSettlement);
+  const { data: trip } = useTrip(id);
+  const { data: expenses = [] } = useExpenses(id);
+  const { data: collaborators = [] } = useMembers(id);
+  const { data: settlements = [] } = useSettlements(id);
+  const addSettlement = useAddSettlement(id);
 
   if (!trip) return null;
   const crew = collaborators.filter((c) => c.tripId === trip.id);
@@ -32,7 +33,7 @@ export default function Settle() {
   const settle = (fromId: string, toId: string, amount: number) => {
     const from = nameFor(fromId)?.name.split(' ')[0] ?? 'They';
     const to = nameFor(toId)?.name.split(' ')[0] ?? 'them';
-    confirmAction('Record payment', `Mark ${from} → ${to} ${formatMoney(amount, cur)} as paid?`, () => addSettlement({ tripId: trip.id, fromId, toId, amount }), { confirmLabel: 'Mark paid', destructive: false });
+    confirmAction('Record payment', `Mark ${from} → ${to} ${formatMoney(amount, cur)} as paid?`, () => addSettlement.mutate({ tripId: trip.id, fromId, toId, amount }), { confirmLabel: 'Mark paid', destructive: false });
   };
 
   return (

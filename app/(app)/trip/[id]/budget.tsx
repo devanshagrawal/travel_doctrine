@@ -2,7 +2,8 @@ import React from 'react';
 import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { useStore } from '../../../../src/store/useStore';
+import { useTrip } from '../../../../src/hooks/useTrips';
+import { useExpenses, useBudgetCategories } from '../../../../src/hooks/useTripData';
 import { DonutChart } from '../../../../src/components/DonutChart';
 import { Card } from '../../../../src/components/ui';
 import { font, radius, spacing, Palette } from '../../../../src/theme';
@@ -14,9 +15,9 @@ export default function Budget() {
   const { colors } = useTheme();
   const styles = makeStyles(colors);
   const { id } = useLocalSearchParams<{ id: string }>();
-  const trip = useStore((s) => s.trips.find((t) => t.id === id));
-  const expenses = useStore((s) => s.expenses);
-  const categories = useStore((s) => s.budgetCategories);
+  const { data: trip } = useTrip(id);
+  const { data: expenses = [] } = useExpenses(id);
+  const { data: categories = [] } = useBudgetCategories(id);
 
   if (!trip) return null;
   const summary = budgetSummary(expenses, trip);
