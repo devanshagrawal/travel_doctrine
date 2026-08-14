@@ -1,4 +1,5 @@
 import { supabase } from '../lib/supabase';
+import { ensureRemote } from '../lib/storage';
 import { Trip } from '../lib/types';
 
 // Default budget categories seeded with every new trip (mirrors the prototype).
@@ -79,10 +80,12 @@ export async function createTrip(input: Omit<Trip, 'id'>): Promise<Trip> {
   const uid = auth.user?.id;
   if (!uid) throw new Error('Not signed in.');
 
-  // 1) the trip itself (owner_id must equal auth.uid() per RLS)
+  // 1) the trip itself (owner_id must equal auth.uid() per RLS). Upload a
+  // locally-picked cover photo to the public 'covers' bucket first.
+  const coverImage = await ensureRemote(input.coverImage, 'covers');
   const { data: tripRow, error: tErr } = await supabase
     .from('trips')
-    .insert({ ...tripToRow(input), owner_id: uid })
+    .insert({ ...tripToRow({ ...input, coverImage }), owner_id: uid })
     .select('*')
     .single();
   if (tErr) throw tErr;
@@ -112,7 +115,11 @@ export async function createTrip(input: Omit<Trip, 'id'>): Promise<Trip> {
 }
 
 export async function updateTrip(id: string, patch: Partial<Trip>): Promise<void> {
-  const { error } = await supabase.from('trips').update(tripToRow(patch)).eq('id', id);
+  const next =
+    patch.coverImage !== undefined
+      ? { ...patch, coverImage: await ensureRemote(patch.coverImage, 'covers') }
+      : patch;
+  const { error } = await supabase.from('trips').update(tripToRow(next)).eq('id', id);
   if (error) throw error;
 }
 

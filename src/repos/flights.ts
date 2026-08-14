@@ -1,4 +1,5 @@
 import { supabase } from '../lib/supabase';
+import { ensureRemote } from '../lib/storage';
 import { Flight } from '../lib/types';
 import { syncSourceExpense, syncSourceDocument, syncSourceItinerary } from './sync';
 
@@ -65,6 +66,10 @@ export interface SaveFlightInput {
 // entry in sync (each an idempotent upsert keyed by the flight id).
 export async function saveFlight(a: SaveFlightInput): Promise<void> {
   const departAt = `${a.dayPart}T${a.timePart || '00:00'}:00`;
+  // Upload any newly-picked images so the flight row and its linked document
+  // store durable URLs, not local file:// paths.
+  const proofUri = await ensureRemote(a.proofUri, 'documents');
+  const boardingUri = await ensureRemote(a.boardingUri, 'documents');
   const fields = {
     airline: a.airline,
     from_code: a.fromCode,
@@ -72,8 +77,8 @@ export async function saveFlight(a: SaveFlightInput): Promise<void> {
     depart_at: departAt,
     price: a.price || null,
     currency: a.currency,
-    booking_proof_uri: a.proofUri ?? null,
-    boarding_pass_uri: a.boardingUri ?? null,
+    booking_proof_uri: proofUri ?? null,
+    boarding_pass_uri: boardingUri ?? null,
   };
 
   let flightId = a.editingId;
@@ -101,16 +106,17 @@ export async function saveFlight(a: SaveFlightInput): Promise<void> {
     spentAt: a.dayPart,
     paidBy: 'Me',
   });
-  await syncSourceDocument({ sourceId: flightId, sourceTag: 'booking', tripId: a.tripId, type: 'other', title: `Flight – ${a.airline} booking`, fileUri: a.proofUri });
-  await syncSourceDocument({ sourceId: flightId, sourceTag: 'boarding', tripId: a.tripId, type: 'other', title: `Flight – ${a.airline} boarding pass`, fileUri: a.boardingUri });
+  await syncSourceDocument({ sourceId: flightId, sourceTag: 'booking', tripId: a.tripId, type: 'other', title: `Flight – ${a.airline} booking`, fileUri: proofUri });
+  await syncSourceDocument({ sourceId: flightId, sourceTag: 'boarding', tripId: a.tripId, type: 'other', title: `Flight – ${a.airline} boarding pass`, fileUri: boardingUri });
   await syncSourceItinerary({ sourceId: flightId, tripId: a.tripId, dayDate: a.dayPart, time: a.timePart || undefined, title: `Flight – ${a.airline} (${routeLabel})`, type: 'transport' });
 }
 
 // Attach a boarding pass to an existing flight and surface it in Documents.
 export async function attachBoardingPass(flight: Flight, uri: string): Promise<void> {
-  const { error } = await supabase.from('flights').update({ boarding_pass_uri: uri }).eq('id', flight.id);
+  const remote = await ensureRemote(uri, 'documents');
+  const { error } = await supabase.from('flights').update({ boarding_pass_uri: remote }).eq('id', flight.id);
   if (error) throw error;
-  await syncSourceDocument({ sourceId: flight.id, sourceTag: 'boarding', tripId: flight.tripId, type: 'other', title: `Flight – ${flight.airline} boarding pass`, fileUri: uri });
+  await syncSourceDocument({ sourceId: flight.id, sourceTag: 'boarding', tripId: flight.tripId, type: 'other', title: `Flight – ${flight.airline} boarding pass`, fileUri: remote });
 }
 
 // Delete a flight and everything auto-created from it.

@@ -1,4 +1,5 @@
 import { supabase } from '../lib/supabase';
+import { ensureRemote } from '../lib/storage';
 import { Hotel } from '../lib/types';
 import { syncSourceExpense, syncSourceDocument, syncSourceItinerary } from './sync';
 
@@ -51,13 +52,14 @@ export interface SaveHotelInput {
 }
 
 export async function saveHotel(a: SaveHotelInput): Promise<void> {
+  const proofUri = await ensureRemote(a.proofUri, 'documents');
   const fields = {
     name: a.name,
     check_in: a.checkIn,
     check_out: a.checkOut,
     total_price: a.price || null,
     currency: a.currency,
-    proof_uri: a.proofUri ?? null,
+    proof_uri: proofUri ?? null,
   };
 
   let hotelId = a.editingId;
@@ -84,14 +86,15 @@ export async function saveHotel(a: SaveHotelInput): Promise<void> {
     spentAt: a.checkIn,
     paidBy: 'Me',
   });
-  await syncSourceDocument({ sourceId: hotelId, sourceTag: 'booking', tripId: a.tripId, type: 'other', title: `Hotel – ${a.name} booking`, fileUri: a.proofUri });
+  await syncSourceDocument({ sourceId: hotelId, sourceTag: 'booking', tripId: a.tripId, type: 'other', title: `Hotel – ${a.name} booking`, fileUri: proofUri });
   await syncSourceItinerary({ sourceId: hotelId, tripId: a.tripId, dayDate: a.checkIn, time: '15:00', title: `Check in – ${a.name}`, type: 'stay', location: a.name });
 }
 
 export async function attachHotelProof(hotel: Hotel, uri: string): Promise<void> {
-  const { error } = await supabase.from('hotels').update({ proof_uri: uri }).eq('id', hotel.id);
+  const remote = await ensureRemote(uri, 'documents');
+  const { error } = await supabase.from('hotels').update({ proof_uri: remote }).eq('id', hotel.id);
   if (error) throw error;
-  await syncSourceDocument({ sourceId: hotel.id, sourceTag: 'booking', tripId: hotel.tripId, type: 'other', title: `Hotel – ${hotel.name} booking`, fileUri: uri });
+  await syncSourceDocument({ sourceId: hotel.id, sourceTag: 'booking', tripId: hotel.tripId, type: 'other', title: `Hotel – ${hotel.name} booking`, fileUri: remote });
 }
 
 export async function deleteHotel(id: string): Promise<void> {

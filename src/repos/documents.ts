@@ -1,4 +1,5 @@
 import { supabase } from '../lib/supabase';
+import { ensureRemote } from '../lib/storage';
 import { TravelDocument, DocumentType } from '../lib/types';
 import { currentUserId } from './sync';
 
@@ -40,12 +41,13 @@ export async function listDocuments(tripId: string | null): Promise<TravelDocume
 
 export async function addDocument(input: Omit<TravelDocument, 'id'>): Promise<void> {
   const owner = await currentUserId();
+  const fileUri = await ensureRemote(input.fileUri, 'documents');
   const { error } = await supabase.from('documents').insert({
     owner_id: owner,
     trip_id: input.tripId,
     type: input.type,
     title: input.title,
-    file_uri: input.fileUri ?? null,
+    file_uri: fileUri ?? null,
     number: input.number ?? null,
     expiry_date: input.expiryDate ?? null,
     source_id: input.sourceId ?? null,
