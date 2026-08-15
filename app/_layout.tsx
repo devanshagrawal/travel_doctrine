@@ -11,7 +11,6 @@ import {
   Fraunces_500Medium_Italic,
 } from '@expo-google-fonts/fraunces';
 import { QueryClientProvider } from '@tanstack/react-query';
-import { useStore } from '../src/store/useStore';
 import { ConfirmHost } from '../src/components/ConfirmHost';
 import { useTheme } from '../src/theme/useTheme';
 import { fonts } from '../src/theme';
@@ -19,7 +18,6 @@ import { queryClient } from '../src/lib/queryClient';
 import { AuthProvider } from '../src/lib/auth';
 
 export default function RootLayout() {
-  const hasHydrated = useStore((s) => s.hasHydrated);
   const { mode, colors } = useTheme();
   const [fontsLoaded] = useFonts({
     Fraunces_400Regular,
@@ -28,7 +26,7 @@ export default function RootLayout() {
     Fraunces_500Medium_Italic,
   });
 
-  if (!hasHydrated || !fontsLoaded) {
+  if (!fontsLoaded) {
     return (
       <View style={[styles.splash, { backgroundColor: colors.bg }]}>
         <Text style={styles.logo}>✈️</Text>

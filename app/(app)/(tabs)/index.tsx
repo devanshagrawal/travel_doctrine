@@ -2,13 +2,12 @@ import React from 'react';
 import { View, Text, StyleSheet, ScrollView, Pressable, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { useStore } from '../../../src/store/useStore';
+import { useAuth } from '../../../src/lib/auth';
 import { useTrips } from '../../../src/hooks/useTrips';
 import { useAllExpenses } from '../../../src/hooks/useTripData';
 import { useTheme } from '../../../src/theme/useTheme';
 import { Masthead } from '../../../src/components/Masthead';
 import { TripCover } from '../../../src/components/TripCover';
-import { AvatarStack } from '../../../src/components/Avatar';
 import { EmptyState } from '../../../src/components/ui';
 import { fmtDateRange, tripDurationDays, tripStatusFor, isTripDone } from '../../../src/lib/format';
 import { formatMoney } from '../../../src/lib/currency';
@@ -25,7 +24,7 @@ function greeting() {
 export default function TripsHome() {
   const router = useRouter();
   const { colors, spacing, shadow } = useTheme();
-  const user = useStore((s) => s.user);
+  const { user } = useAuth();
   const { data: expenses = [] } = useAllExpenses();
   const { data: trips = [], isLoading, error } = useTrips();
 
@@ -86,7 +85,6 @@ function SectionLabel({ title, count }: { title: string; count: string }) {
 
 function TripCard({ trip, spent, hero, onPress }: { trip: Trip; spent: number; hero?: boolean; onPress: () => void }) {
   const { colors, fonts, radius, shadow } = useTheme();
-  const crew = useStore((s) => s.collaborators).filter((c) => c.tripId === trip.id);
   const status = tripStatusFor(trip);
   const pct = trip.totalBudget > 0 ? Math.min(spent / trip.totalBudget, 1) : 0;
   const barColor = pct >= 1 ? colors.danger : pct >= 0.8 ? colors.warning : colors.success;
@@ -123,7 +121,6 @@ function TripCard({ trip, spent, hero, onPress }: { trip: Trip; spent: number; h
           <Text style={[styles.budgetSub, { color: colors.textMuted }]}>
             {formatMoney(spent, trip.baseCurrency, { compact: true })} of {formatMoney(trip.totalBudget, trip.baseCurrency, { compact: true })} spent
           </Text>
-          {crew.length > 1 && <AvatarStack people={crew} size={24} max={3} />}
         </View>
       </View>
     </Pressable>

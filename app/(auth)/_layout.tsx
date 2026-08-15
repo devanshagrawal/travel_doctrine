@@ -1,9 +1,9 @@
 import { Redirect, Stack } from 'expo-router';
-import { useStore } from '../../src/store/useStore';
+import { useAuth } from '../../src/lib/auth';
 
 export default function AuthLayout() {
-  const isAuthed = useStore((s) => s.isAuthed);
+  const { session } = useAuth();
   // Already signed in? Skip auth entirely.
-  if (isAuthed) return <Redirect href="/(app)/(tabs)" />;
+  if (session) return <Redirect href="/(app)/(tabs)" />;
   return <Stack screenOptions={{ headerShown: false }} />;
 }

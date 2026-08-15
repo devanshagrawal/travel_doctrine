@@ -1,42 +1,41 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import type { Session } from '@supabase/supabase-js';
 import { supabase } from './supabase';
-import { useStore } from '../store/useStore';
 import { User } from './types';
 
 interface AuthContextValue {
   session: Session | null;
+  user: User | null; // the signed-in user's profile
   loading: boolean; // true until the initial session check resolves
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (fullName: string, email: string, password: string) => Promise<{ needsConfirmation: boolean }>;
   signOut: () => Promise<void>;
+  updateProfile: (patch: Partial<User>) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
-// Pull the signed-in user's profile row and mirror it into the zustand store
-// as `user` so existing screens (greeting, profile, "isMe" crew rows) keep
-// working while the data layer is migrated table-by-table. Also claims any
-// pending email invites addressed to this account.
-async function syncProfile(session: Session) {
+// Load the signed-in user's profile row (claiming any pending email invites
+// first) and shape it into the app's User type.
+async function fetchProfile(session: Session): Promise<User> {
   await supabase.rpc('claim_invites').then(undefined, () => {});
   const { data } = await supabase
     .from('profiles')
     .select('*')
     .eq('id', session.user.id)
     .maybeSingle();
-  const user: User = {
+  return {
     id: session.user.id,
     fullName: data?.full_name || (session.user.user_metadata?.full_name as string) || '',
     email: data?.email || session.user.email || '',
     homeCurrency: data?.home_currency || 'USD',
     avatarColor: data?.avatar_color || '#C2703D',
   };
-  useStore.setState({ user, isAuthed: true });
 }
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
+  const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -44,15 +43,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     supabase.auth.getSession().then(async ({ data }) => {
       if (!active) return;
       setSession(data.session);
-      if (data.session) await syncProfile(data.session);
-      else useStore.setState({ isAuthed: false, user: null });
+      setUser(data.session ? await fetchProfile(data.session) : null);
       setLoading(false);
     });
 
     const { data: sub } = supabase.auth.onAuthStateChange((_event, s) => {
       setSession(s);
-      if (s) syncProfile(s);
-      else useStore.setState({ isAuthed: false, user: null });
+      if (s) fetchProfile(s).then((u) => { if (active) setUser(u); });
+      else setUser(null);
     });
 
     return () => {
@@ -63,6 +61,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const value: AuthContextValue = {
     session,
+    user,
     loading,
     signIn: async (email, password) => {
       const { error } = await supabase.auth.signInWithPassword({ email, password });
@@ -81,6 +80,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     },
     signOut: async () => {
       await supabase.auth.signOut();
+    },
+    updateProfile: async (patch) => {
+      const uid = session?.user.id;
+      if (!uid) return;
+      const row: Record<string, unknown> = {};
+      if (patch.fullName !== undefined) row.full_name = patch.fullName;
+      if (patch.email !== undefined) row.email = patch.email;
+      if (patch.homeCurrency !== undefined) row.home_currency = patch.homeCurrency;
+      if (patch.avatarColor !== undefined) row.avatar_color = patch.avatarColor;
+      const { error } = await supabase.from('profiles').update(row).eq('id', uid);
+      if (error) throw error;
+      setUser((u) => (u ? { ...u, ...patch } : u));
     },
   };
 

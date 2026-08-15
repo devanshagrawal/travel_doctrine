@@ -4,8 +4,9 @@ import { useRouter } from 'expo-router';
 import { confirmAction } from '../../../src/lib/confirm';
 import { Masthead } from '../../../src/components/Masthead';
 import { Ionicons } from '@expo/vector-icons';
-import { useStore } from '../../../src/store/useStore';
 import { useAuth } from '../../../src/lib/auth';
+import { useTrips } from '../../../src/hooks/useTrips';
+import { notify } from '../../../src/lib/confirm';
 import { Card, Button, Field } from '../../../src/components/ui';
 import { CURRENCIES, currencyMeta } from '../../../src/lib/currency';
 import { font, radius, shadow, spacing, Palette } from '../../../src/theme';
@@ -15,12 +16,8 @@ export default function Profile() {
   const router = useRouter();
   const { colors, mode, toggle } = useTheme();
   const styles = makeStyles(colors);
-  const user = useStore((s) => s.user);
-  const { signOut } = useAuth();
-  const setHomeCurrency = useStore((s) => s.setHomeCurrency);
-  const updateUser = useStore((s) => s.updateUser);
-  const resetToSeed = useStore((s) => s.resetToSeed);
-  const trips = useStore((s) => s.trips);
+  const { user, signOut, updateProfile } = useAuth();
+  const { data: trips = [] } = useTrips();
   const [pickingCurrency, setPickingCurrency] = React.useState(false);
 
   const [editing, setEditing] = React.useState(false);
@@ -32,9 +29,13 @@ export default function Profile() {
     setEmail(user?.email ?? '');
     setEditing(true);
   };
-  const saveProfile = () => {
-    updateUser({ fullName: name.trim() || user?.fullName, email: email.trim() || user?.email });
-    setEditing(false);
+  const saveProfile = async () => {
+    try {
+      await updateProfile({ fullName: name.trim() || user?.fullName, email: email.trim() || user?.email });
+      setEditing(false);
+    } catch (e: any) {
+      notify('Could not save profile', e?.message ?? 'Please try again.');
+    }
   };
 
   const onLogout = () => {
@@ -42,10 +43,6 @@ export default function Profile() {
       await signOut();
       router.replace('/(auth)/login');
     }, { confirmLabel: 'Log out' });
-  };
-
-  const onReset = () => {
-    confirmAction('Reset demo data', 'This restores all sample trips and clears your changes.', () => resetToSeed(), { confirmLabel: 'Reset' });
   };
 
   const initials = (user?.fullName || 'U').split(' ').map((s) => s[0]).slice(0, 2).join('');
@@ -87,18 +84,12 @@ export default function Profile() {
           {pickingCurrency && (
             <View style={styles.currencyGrid}>
               {CURRENCIES.map((c) => (
-                <Pressable key={c.code} style={[styles.curChip, user?.homeCurrency === c.code && styles.curChipActive]} onPress={() => { setHomeCurrency(c.code); setPickingCurrency(false); }}>
+                <Pressable key={c.code} style={[styles.curChip, user?.homeCurrency === c.code && styles.curChipActive]} onPress={() => { updateProfile({ homeCurrency: c.code }).catch(() => {}); setPickingCurrency(false); }}>
                   <Text style={styles.curText}>{c.flag} {c.code}</Text>
                 </Pressable>
               ))}
             </View>
           )}
-          <View style={styles.sep} />
-          <Pressable style={styles.row} onPress={onReset}>
-            <Ionicons name="refresh-outline" size={20} color={colors.warning} />
-            <Text style={styles.rowText}>Reset demo data</Text>
-            <Ionicons name="chevron-forward" size={18} color={colors.textFaint} />
-          </Pressable>
         </Card>
 
         <Card padded={false} style={{ marginTop: spacing.md }}>
@@ -128,7 +119,7 @@ export default function Profile() {
           <Ionicons name="log-out-outline" size={20} color={colors.danger} />
           <Text style={styles.logoutText}>Log out</Text>
         </Pressable>
-        <Text style={styles.footer}>Mock-data prototype · no data leaves your device</Text>
+        <Text style={styles.footer}>Wander · synced to your account</Text>
       </ScrollView>
 
       {/* Edit profile sheet */}

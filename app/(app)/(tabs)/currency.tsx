@@ -5,12 +5,13 @@ import { CURRENCIES, RATES, convert, currencyMeta } from '../../../src/lib/curre
 import { font, radius, shadow, spacing, Palette } from '../../../src/theme';
 import { useTheme } from '../../../src/theme/useTheme';
 import { Masthead } from '../../../src/components/Masthead';
-import { useStore } from '../../../src/store/useStore';
+import { useAuth } from '../../../src/lib/auth';
 
 export default function CurrencyExchanger() {
   const { colors } = useTheme();
   const styles = makeStyles(colors);
-  const homeCurrency = useStore((s) => s.user?.homeCurrency || 'USD');
+  const { user } = useAuth();
+  const homeCurrency = user?.homeCurrency || 'USD';
   const [amount, setAmount] = React.useState('100');
   const [from, setFrom] = React.useState('USD');
   const [to, setTo] = React.useState(homeCurrency);
