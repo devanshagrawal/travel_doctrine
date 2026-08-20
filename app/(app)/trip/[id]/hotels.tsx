@@ -34,13 +34,14 @@ export default function Hotels() {
   const [checkIn, setCheckIn] = React.useState('');
   const [checkOut, setCheckOut] = React.useState('');
   const [proofUri, setProofUri] = React.useState<string | undefined>(undefined);
+  const [platform, setPlatform] = React.useState('');
 
   if (!trip) return null;
   const list = hotels.filter((h) => h.tripId === trip.id).sort((a, b) => (a.checkIn > b.checkIn ? 1 : -1));
 
   const close = () => {
     setAdding(false); setEditingId(null);
-    setName(''); setPrice(''); setCheckIn(''); setCheckOut(''); setProofUri(undefined);
+    setName(''); setPrice(''); setCheckIn(''); setCheckOut(''); setProofUri(undefined); setPlatform('');
   };
 
   const openAdd = () => { close(); setAdding(true); };
@@ -52,6 +53,7 @@ export default function Hotels() {
     setCheckIn(h.checkIn);
     setCheckOut(h.checkOut);
     setProofUri(h.proofUri);
+    setPlatform(h.platform || '');
     setAdding(true);
   };
 
@@ -73,6 +75,7 @@ export default function Hotels() {
         checkOut: checkOut.trim(),
         price: Number(price) || 0,
         currency: trip.baseCurrency,
+        platform: platform.trim() || undefined,
         categoryId: findCategoryId(categories, trip.id, ['hotel', 'stay', 'villa', 'accom', 'lodg']),
         proofUri,
       });
@@ -119,6 +122,7 @@ export default function Hotels() {
                   <View style={{ flex: 1 }}>
                     <Text style={styles.hotelName}>{h.name}</Text>
                     {h.address && <Text style={styles.hotelAddr} numberOfLines={1}>{h.address}</Text>}
+                    {!!h.platform && <Text style={styles.hotelAddr} numberOfLines={1}>Booked via {h.platform}</Text>}
                   </View>
                   <Pressable hitSlop={8} onPress={() => openEdit(h)} style={styles.editBtn}>
                     <Ionicons name="create-outline" size={18} color={colors.textMuted} />
@@ -184,6 +188,7 @@ export default function Hotels() {
               <View style={{ flex: 1 }}><Field label="Check-in *" placeholder="YYYY-MM-DD" value={checkIn} onChangeText={setCheckIn} autoCapitalize="none" /></View>
               <View style={{ flex: 1 }}><Field label="Check-out *" placeholder="YYYY-MM-DD" value={checkOut} onChangeText={setCheckOut} autoCapitalize="none" /></View>
             </View>
+            <Field label="Booked via (optional)" icon="globe-outline" placeholder="e.g. Booking.com, direct" value={platform} onChangeText={setPlatform} autoCapitalize="none" />
 
             <Text style={styles.uploadLabel}>Booking proof</Text>
             <Pressable style={styles.uploadBox} onPress={pickProof}>

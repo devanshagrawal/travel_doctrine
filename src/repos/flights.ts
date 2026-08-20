@@ -10,6 +10,7 @@ interface FlightRow {
   depart_at: string;
   price: number | null;
   currency: string | null;
+  platform: string | null;
   booking_proof_uri: string | null;
   boarding_pass_uri: string | null;
   flight_no: string | null;
@@ -29,6 +30,7 @@ function rowToFlight(r: FlightRow): Flight {
     departAt: r.depart_at,
     price: r.price ?? undefined,
     currency: r.currency ?? undefined,
+    platform: r.platform ?? undefined,
     bookingProofUri: r.booking_proof_uri ?? undefined,
     boardingPassUri: r.boarding_pass_uri ?? undefined,
     flightNo: r.flight_no ?? undefined,
@@ -57,6 +59,7 @@ export interface SaveFlightInput {
   timePart: string; // HH:mm ('' → none)
   price: number; // 0 = no price
   currency: string;
+  platform?: string;
   categoryId: string | null;
   proofUri?: string;
   boardingUri?: string;
@@ -77,6 +80,7 @@ export async function saveFlight(a: SaveFlightInput): Promise<void> {
     depart_at: departAt,
     price: a.price || null,
     currency: a.currency,
+    platform: a.platform ?? null,
     booking_proof_uri: proofUri ?? null,
     boarding_pass_uri: boardingUri ?? null,
   };

@@ -38,13 +38,14 @@ export default function Flights() {
   const [time, setTime] = React.useState('');
   const [proofUri, setProofUri] = React.useState<string | undefined>(undefined);
   const [boardingUri, setBoardingUri] = React.useState<string | undefined>(undefined);
+  const [platform, setPlatform] = React.useState('');
 
   if (!trip) return null;
   const list = flights.filter((f) => f.tripId === trip.id).sort((a, b) => (a.departAt > b.departAt ? 1 : -1));
 
   const close = () => {
     setAdding(false); setEditingId(null);
-    setAirline(''); setFrom(''); setTo(''); setPrice(''); setDate(''); setTime(''); setProofUri(undefined); setBoardingUri(undefined);
+    setAirline(''); setFrom(''); setTo(''); setPrice(''); setDate(''); setTime(''); setProofUri(undefined); setBoardingUri(undefined); setPlatform('');
   };
 
   const openAdd = () => {
@@ -64,6 +65,7 @@ export default function Flights() {
     setTime(t === '00:00' ? '' : t);
     setProofUri(f.bookingProofUri);
     setBoardingUri(f.boardingPassUri);
+    setPlatform(f.platform || '');
     setAdding(true);
   };
 
@@ -87,6 +89,7 @@ export default function Flights() {
         timePart: time.trim(),
         price: Number(price) || 0,
         currency: trip.baseCurrency,
+        platform: platform.trim() || undefined,
         categoryId: findCategoryId(categories, trip.id, ['flight', 'air']),
         proofUri,
         boardingUri,
@@ -174,6 +177,12 @@ export default function Flights() {
                     <Text style={styles.footValue}>{fmtDate(f.departAt, 'MMM D, YYYY')}</Text>
                   </View>
                 )}
+                {!!f.platform && (
+                  <View style={{ marginLeft: hasRoute(f) ? spacing.lg : 0 }}>
+                    <Text style={styles.footLabel}>Booked via</Text>
+                    <Text style={styles.footValue}>{f.platform}</Text>
+                  </View>
+                )}
                 <Pressable style={styles.passBtn} onPress={() => uploadPass(f)}>
                   <Ionicons name={f.boardingPassUri ? 'checkmark-circle' : 'qr-code-outline'} size={16} color={f.boardingPassUri ? colors.success : colors.primary} />
                   <Text style={[styles.passText, f.boardingPassUri && { color: colors.success }]}>{f.boardingPassUri ? 'Boarding pass added' : 'Add boarding pass'}</Text>
@@ -222,6 +231,7 @@ export default function Flights() {
               <View style={{ flex: 1.4 }}><Field label="Date *" placeholder="YYYY-MM-DD" value={date} onChangeText={setDate} autoCapitalize="none" /></View>
               <View style={{ flex: 1 }}><Field label="Time" placeholder="HH:mm" value={time} onChangeText={setTime} autoCapitalize="none" /></View>
             </View>
+            <Field label="Booked via (optional)" icon="globe-outline" placeholder="e.g. MakeMyTrip, direct" value={platform} onChangeText={setPlatform} autoCapitalize="none" />
 
             <View style={{ flexDirection: 'row', gap: spacing.md }}>
               <UploadTile label="Booking proof" uri={proofUri} onPress={() => pick(setProofUri)} />

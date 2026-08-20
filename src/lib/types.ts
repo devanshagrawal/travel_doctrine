@@ -104,6 +104,7 @@ export interface Flight {
   departAt: string; // ISO datetime (date + time)
   price?: number; // in `currency`
   currency?: CurrencyCode;
+  platform?: string; // where it was booked (e.g. MakeMyTrip, direct)
   bookingProofUri?: string;
   boardingPassUri?: string;
   // Optional route details (kept for seed data; the quick-add form omits them).
@@ -124,6 +125,7 @@ export interface Hotel {
   checkOut: string; // ISO date
   totalPrice?: number; // in `currency`
   currency?: CurrencyCode;
+  platform?: string; // where it was booked (e.g. Booking.com, direct)
   proofUri?: string;
   // Optional extras (kept for seed data; the quick-add form omits them).
   address?: string;
