@@ -6,6 +6,7 @@ interface ItineraryRow {
   trip_id: string;
   day_date: string;
   time: string | null;
+  end_time: string | null;
   title: string;
   type: ItineraryType;
   location: string | null;
@@ -19,6 +20,7 @@ function rowToItem(r: ItineraryRow): ItineraryItem {
     tripId: r.trip_id,
     dayDate: r.day_date,
     time: r.time ?? undefined,
+    endTime: r.end_time ?? undefined,
     title: r.title,
     type: r.type,
     location: r.location ?? undefined,
@@ -41,6 +43,7 @@ export async function addItineraryItem(input: Omit<ItineraryItem, 'id'>): Promis
     trip_id: input.tripId,
     day_date: input.dayDate,
     time: input.time ?? null,
+    end_time: input.endTime ?? null,
     title: input.title,
     type: input.type,
     location: input.location ?? null,

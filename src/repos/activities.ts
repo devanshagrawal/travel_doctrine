@@ -9,6 +9,7 @@ interface ActivityRow {
   name: string;
   activity_date: string;
   time: string | null;
+  end_time: string | null;
   location: string | null;
   price: number | null;
   currency: string | null;
@@ -24,6 +25,7 @@ function rowToActivity(r: ActivityRow): Activity {
     name: r.name,
     activityDate: r.activity_date,
     time: r.time ?? undefined,
+    endTime: r.end_time ?? undefined,
     location: r.location ?? undefined,
     price: r.price ?? undefined,
     currency: r.currency ?? undefined,
@@ -45,6 +47,7 @@ export interface SaveActivityInput {
   name: string;
   activityDate: string;
   time?: string;
+  endTime?: string;
   location?: string;
   price: number; // 0 = no price
   currency: string;
@@ -61,6 +64,7 @@ export async function saveActivity(a: SaveActivityInput): Promise<void> {
     name: a.name,
     activity_date: a.activityDate,
     time: a.time ?? null,
+    end_time: a.endTime ?? null,
     location: a.location ?? null,
     price: a.price || null,
     currency: a.currency,
@@ -93,7 +97,7 @@ export async function saveActivity(a: SaveActivityInput): Promise<void> {
     paidBy: 'Me',
   });
   await syncSourceDocument({ sourceId: activityId, sourceTag: 'booking', tripId: a.tripId, type: 'other', title: `Activity – ${a.name} ticket`, fileUri: proofUri });
-  await syncSourceItinerary({ sourceId: activityId, tripId: a.tripId, dayDate: a.activityDate, time: a.time, title: a.name, type: 'activity', location: a.location });
+  await syncSourceItinerary({ sourceId: activityId, tripId: a.tripId, dayDate: a.activityDate, time: a.time, endTime: a.endTime, title: a.name, type: 'activity', location: a.location });
 }
 
 export async function attachTicket(activity: Activity, uri: string): Promise<void> {

@@ -18,7 +18,8 @@ export interface ItineraryItem {
   id: string;
   tripId: string;
   dayDate: string; // ISO date 'YYYY-MM-DD'
-  time?: string; // 'HH:mm'
+  time?: string; // start time 'HH:mm'
+  endTime?: string; // end time 'HH:mm'
   title: string;
   type: ItineraryType;
   location?: string;
@@ -141,7 +142,8 @@ export interface Activity {
   tripId: string;
   name: string;
   activityDate: string; // ISO date 'YYYY-MM-DD'
-  time?: string; // 'HH:mm'
+  time?: string; // start time 'HH:mm'
+  endTime?: string; // end time 'HH:mm'
   location?: string;
   price?: number; // in `currency`
   currency?: CurrencyCode;

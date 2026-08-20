@@ -91,6 +91,7 @@ export default function Itinerary() {
                       <Pressable key={it.id} style={styles.timelineRow} onLongPress={() => confirmDelete(it.id, it.title)}>
                         <View style={styles.timeCol}>
                           <Text style={styles.timeText}>{it.time || '—'}</Text>
+                          {!!it.endTime && <Text style={styles.timeEnd}>–{it.endTime}</Text>}
                         </View>
                         <View style={[styles.line]}>
                           <View style={[styles.node, { backgroundColor: meta.color }]} />
@@ -170,6 +171,7 @@ const makeStyles = (colors: Palette) => StyleSheet.create({
   timelineRow: { flexDirection: 'row', alignItems: 'stretch' },
   timeCol: { width: 44, paddingTop: 10 },
   timeText: { fontSize: font.size.xs, color: colors.textMuted, fontWeight: font.weight.semibold },
+  timeEnd: { fontSize: 10, color: colors.textFaint, fontWeight: font.weight.medium, marginTop: 1 },
   line: { width: 20, alignItems: 'center' },
   node: { width: 12, height: 12, borderRadius: 6, marginTop: 12, borderWidth: 2, borderColor: colors.bg },
   itemCard: { flex: 1, backgroundColor: colors.surface, borderRadius: radius.md, padding: spacing.md, marginBottom: spacing.sm, borderWidth: 1, borderColor: colors.border },

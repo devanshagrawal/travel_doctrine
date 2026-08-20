@@ -34,6 +34,7 @@ export default function Activities() {
   const [name, setName] = React.useState('');
   const [date, setDate] = React.useState('');
   const [time, setTime] = React.useState('');
+  const [endTime, setEndTime] = React.useState('');
   const [location, setLocation] = React.useState('');
   const [price, setPrice] = React.useState('');
   const [platform, setPlatform] = React.useState('');
@@ -44,7 +45,7 @@ export default function Activities() {
 
   const close = () => {
     setAdding(false); setEditingId(null);
-    setName(''); setDate(''); setTime(''); setLocation(''); setPrice(''); setPlatform(''); setProofUri(undefined);
+    setName(''); setDate(''); setTime(''); setEndTime(''); setLocation(''); setPrice(''); setPlatform(''); setProofUri(undefined);
   };
 
   const openAdd = () => { close(); setDate(trip.startDate); setAdding(true); };
@@ -54,6 +55,7 @@ export default function Activities() {
     setName(a.name);
     setDate(a.activityDate);
     setTime(a.time || '');
+    setEndTime(a.endTime || '');
     setLocation(a.location || '');
     setPrice(a.price != null ? String(a.price) : '');
     setPlatform(a.platform || '');
@@ -77,6 +79,7 @@ export default function Activities() {
         name: name.trim(),
         activityDate: date.trim(),
         time: time.trim() || undefined,
+        endTime: endTime.trim() || undefined,
         location: location.trim() || undefined,
         price: Number(price) || 0,
         currency: trip.baseCurrency,
@@ -130,7 +133,7 @@ export default function Activities() {
               <View style={styles.metaRow}>
                 <View style={styles.metaItem}>
                   <Ionicons name="calendar-outline" size={14} color={colors.textMuted} />
-                  <Text style={styles.metaText}>{fmtDate(a.activityDate, 'MMM D, YYYY')}{a.time ? ` · ${a.time}` : ''}</Text>
+                  <Text style={styles.metaText}>{fmtDate(a.activityDate, 'MMM D, YYYY')}{a.time ? ` · ${a.time}${a.endTime ? ` – ${a.endTime}` : ''}` : ''}</Text>
                 </View>
                 {!!a.location && (
                   <View style={styles.metaItem}>
@@ -178,9 +181,10 @@ export default function Activities() {
           <Text style={styles.sheetHint}>Price and ticket auto-fill your expenses, documents & itinerary.</Text>
           <ScrollView keyboardShouldPersistTaps="handled">
             <Field label="Activity" icon="sparkles-outline" placeholder="e.g. Sintra & Cascais day tour" value={name} onChangeText={setName} />
+            <Field label="Date *" icon="calendar-outline" placeholder="YYYY-MM-DD" value={date} onChangeText={setDate} autoCapitalize="none" />
             <View style={{ flexDirection: 'row', gap: spacing.md }}>
-              <View style={{ flex: 1.4 }}><Field label="Date *" placeholder="YYYY-MM-DD" value={date} onChangeText={setDate} autoCapitalize="none" /></View>
-              <View style={{ flex: 1 }}><Field label="Time" placeholder="HH:mm" value={time} onChangeText={setTime} autoCapitalize="none" /></View>
+              <View style={{ flex: 1 }}><Field label="Start time (optional)" placeholder="HH:mm" value={time} onChangeText={setTime} autoCapitalize="none" /></View>
+              <View style={{ flex: 1 }}><Field label="End time (optional)" placeholder="HH:mm" value={endTime} onChangeText={setEndTime} autoCapitalize="none" /></View>
             </View>
             <Field label="Location (optional)" icon="location-outline" placeholder="Where?" value={location} onChangeText={setLocation} />
             <Field label={`Price (${trip.baseCurrency})`} icon="cash-outline" placeholder="0" keyboardType="numeric" value={price} onChangeText={setPrice} />

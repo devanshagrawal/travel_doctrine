@@ -67,6 +67,7 @@ export async function syncSourceItinerary(p: {
   tripId: string;
   dayDate: string;
   time?: string;
+  endTime?: string;
   title: string;
   type: ItineraryType;
   location?: string;
@@ -76,6 +77,7 @@ export async function syncSourceItinerary(p: {
     trip_id: p.tripId,
     day_date: p.dayDate,
     time: p.time ?? null,
+    end_time: p.endTime ?? null,
     title: p.title,
     type: p.type,
     location: p.location ?? null,
