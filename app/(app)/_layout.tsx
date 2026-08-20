@@ -41,6 +41,7 @@ export default function AppLayout() {
       <Stack.Screen name="trip/[id]/documents" options={{ headerShown: true, title: 'Documents' }} />
       <Stack.Screen name="trip/[id]/flights" options={{ headerShown: true, title: 'Flights' }} />
       <Stack.Screen name="trip/[id]/hotels" options={{ headerShown: true, title: 'Hotels' }} />
+      <Stack.Screen name="trip/[id]/activities" options={{ headerShown: true, title: 'Activities' }} />
     </Stack>
   );
 }

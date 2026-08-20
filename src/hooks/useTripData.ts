@@ -9,8 +9,9 @@ import * as itineraryRepo from '../repos/itinerary';
 import * as todosRepo from '../repos/todos';
 import * as flightsRepo from '../repos/flights';
 import * as hotelsRepo from '../repos/hotels';
+import * as activitiesRepo from '../repos/activities';
 import * as documentsRepo from '../repos/documents';
-import { Flight, Hotel } from '../lib/types';
+import { Flight, Hotel, Activity } from '../lib/types';
 
 export const keys = {
   categories: (tripId: string) => ['categories', tripId] as const,
@@ -23,6 +24,7 @@ export const keys = {
   todos: (tripId: string) => ['todos', tripId] as const,
   flights: (tripId: string) => ['flights', tripId] as const,
   hotels: (tripId: string) => ['hotels', tripId] as const,
+  activities: (tripId: string) => ['activities', tripId] as const,
   documents: (tripId: string | null) => ['documents', tripId ?? 'global'] as const,
 };
 
@@ -210,6 +212,32 @@ export function useDeleteHotel(tripId: string) {
   return useMutation({
     mutationFn: (id: string) => hotelsRepo.deleteHotel(id),
     onSuccess: () => { qc.invalidateQueries({ queryKey: keys.hotels(tripId) }); invalidateBookingLinked(qc, tripId); },
+  });
+}
+
+// ---- activities ----
+export function useActivities(tripId: string) {
+  return useQuery({ queryKey: keys.activities(tripId), queryFn: () => activitiesRepo.listActivities(tripId), enabled: !!tripId });
+}
+export function useSaveActivity(tripId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: activitiesRepo.SaveActivityInput) => activitiesRepo.saveActivity(input),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: keys.activities(tripId) }); invalidateBookingLinked(qc, tripId); },
+  });
+}
+export function useAttachTicket(tripId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ activity, uri }: { activity: Activity; uri: string }) => activitiesRepo.attachTicket(activity, uri),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: keys.activities(tripId) }); invalidateBookingLinked(qc, tripId); },
+  });
+}
+export function useDeleteActivity(tripId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => activitiesRepo.deleteActivity(id),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: keys.activities(tripId) }); invalidateBookingLinked(qc, tripId); },
   });
 }
 

@@ -133,6 +133,23 @@ export interface Hotel {
   pricePerNight?: number;
 }
 
+// A planned/booked activity (tour, ticket, experience). Like flights/hotels it
+// can carry a price, a booking platform and a ticket, and it flows into the
+// trip's expenses, documents and itinerary.
+export interface Activity {
+  id: string;
+  tripId: string;
+  name: string;
+  activityDate: string; // ISO date 'YYYY-MM-DD'
+  time?: string; // 'HH:mm'
+  location?: string;
+  price?: number; // in `currency`
+  currency?: CurrencyCode;
+  platform?: string; // where it was booked (e.g. GetYourGuide, direct)
+  bookingProofUri?: string; // ticket / confirmation
+  notes?: string;
+}
+
 export type CollaboratorRole = 'owner' | 'editor';
 
 // A person on a trip. Modelled as its own list keyed by tripId (like a

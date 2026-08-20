@@ -6,7 +6,7 @@ import { supabase } from '../lib/supabase';
 // supabase_realtime publication — see supabase/migrations/0002_realtime.sql.)
 const TABLES = [
   'trips', 'trip_members', 'budget_categories', 'expenses', 'expense_splits',
-  'cash_wallets', 'settlements', 'itinerary_items', 'todos', 'flights', 'hotels', 'documents',
+  'cash_wallets', 'settlements', 'itinerary_items', 'todos', 'flights', 'hotels', 'activities', 'documents',
 ];
 
 // One global subscription: on any change to a watched table, invalidate the

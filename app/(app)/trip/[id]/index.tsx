@@ -4,7 +4,7 @@ import { useRouter, useLocalSearchParams, Stack } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useTrip, useSetTripCompleted } from '../../../../src/hooks/useTrips';
-import { useExpenses, useBudgetCategories, useMembers, useItinerary, useTodos, useDocuments, useFlights, useHotels } from '../../../../src/hooks/useTripData';
+import { useExpenses, useBudgetCategories, useMembers, useItinerary, useTodos, useDocuments, useFlights, useHotels, useActivities } from '../../../../src/hooks/useTripData';
 import { TripCover } from '../../../../src/components/TripCover';
 import { BudgetMeter } from '../../../../src/components/BudgetMeter';
 import { AvatarStack } from '../../../../src/components/Avatar';
@@ -30,6 +30,7 @@ export default function TripOverview() {
   const { data: documents = [] } = useDocuments(id);
   const { data: flights = [] } = useFlights(id);
   const { data: hotels = [] } = useHotels(id);
+  const { data: activities = [] } = useActivities(id);
   const setCompleted = useSetTripCompleted();
 
   if (isLoading) {
@@ -60,6 +61,7 @@ export default function TripOverview() {
     documents: documents.filter((d) => d.tripId === trip.id).length,
     flights: flights.filter((f) => f.tripId === trip.id).length,
     hotels: hotels.filter((h) => h.tripId === trip.id).length,
+    activities: activities.filter((a) => a.tripId === trip.id).length,
     todos: tripTodos.length,
     todosDone: tripTodos.filter((t) => t.done).length,
   };
@@ -71,6 +73,7 @@ export default function TripOverview() {
     { key: 'documents', title: 'Documents', icon: 'document-text', color: '#9333EA', sub: `${counts.documents} files`, href: `/(app)/trip/${trip.id}/documents` },
     { key: 'flights', title: 'Flights', icon: 'airplane', color: '#0EA5E9', sub: `${counts.flights} booked`, href: `/(app)/trip/${trip.id}/flights` },
     { key: 'hotels', title: 'Hotels', icon: 'bed', color: '#E11D48', sub: `${counts.hotels} booked`, href: `/(app)/trip/${trip.id}/hotels` },
+    { key: 'activities', title: 'Activities', icon: 'sparkles', color: '#DB2777', sub: `${counts.activities} booked`, href: `/(app)/trip/${trip.id}/activities` },
     { key: 'todos', title: 'Checklist', icon: 'checkbox', color: '#CA8A04', sub: `${counts.todosDone}/${counts.todos} done`, href: `/(app)/trip/${trip.id}/todos` },
   ] as const;
 
