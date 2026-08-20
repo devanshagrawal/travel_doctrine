@@ -1,8 +1,19 @@
 import dayjs from 'dayjs';
+import utc from 'dayjs/plugin/utc';
+
+dayjs.extend(utc);
 
 export function fmtDate(iso?: string, template = 'MMM D, YYYY'): string {
   if (!iso) return '';
   return dayjs(iso).format(template);
+}
+
+// Flight depart/arrive datetimes are stored as a "floating" wall-clock time
+// (written zoneless, so Postgres keeps it as UTC). Format them in UTC so they
+// show exactly as entered, for every viewer regardless of local timezone.
+export function fmtDateUtc(iso?: string, template = 'MMM D, YYYY'): string {
+  if (!iso) return '';
+  return dayjs.utc(iso).format(template);
 }
 
 export function fmtDateRange(start: string, end: string): string {
@@ -27,7 +38,7 @@ export function nights(checkIn: string, checkOut: string): number {
 
 export function fmtTime(iso?: string): string {
   if (!iso) return '';
-  return dayjs(iso).format('h:mm A');
+  return dayjs.utc(iso).format('h:mm A');
 }
 
 // Relative countdown label for a trip, e.g. "In 12 days", "Ongoing", "Ended".

@@ -9,7 +9,7 @@ import { useFlights, useBudgetCategories, useSaveFlight, useDeleteFlight, useAtt
 import { Button, Field, EmptyState, Pill } from '../../../../src/components/ui';
 import { font, radius, shadow, spacing, Palette } from '../../../../src/theme';
 import { useTheme } from '../../../../src/theme/useTheme';
-import { fmtDate, fmtTime } from '../../../../src/lib/format';
+import { fmtDateUtc, fmtTime } from '../../../../src/lib/format';
 import { findCategoryId } from '../../../../src/lib/selectors';
 import { formatMoney } from '../../../../src/lib/currency';
 import { confirmAction, notify } from '../../../../src/lib/confirm';
@@ -36,6 +36,7 @@ export default function Flights() {
   const [price, setPrice] = React.useState('');
   const [date, setDate] = React.useState('');
   const [time, setTime] = React.useState('');
+  const [arrTime, setArrTime] = React.useState('');
   const [proofUri, setProofUri] = React.useState<string | undefined>(undefined);
   const [boardingUri, setBoardingUri] = React.useState<string | undefined>(undefined);
   const [platform, setPlatform] = React.useState('');
@@ -45,7 +46,7 @@ export default function Flights() {
 
   const close = () => {
     setAdding(false); setEditingId(null);
-    setAirline(''); setFrom(''); setTo(''); setPrice(''); setDate(''); setTime(''); setProofUri(undefined); setBoardingUri(undefined); setPlatform('');
+    setAirline(''); setFrom(''); setTo(''); setPrice(''); setDate(''); setTime(''); setArrTime(''); setProofUri(undefined); setBoardingUri(undefined); setPlatform('');
   };
 
   const openAdd = () => {
@@ -60,9 +61,10 @@ export default function Flights() {
     setFrom(f.fromCode || '');
     setTo(f.toCode || '');
     setPrice(f.price != null ? String(f.price) : '');
-    setDate(dayjs(f.departAt).format('YYYY-MM-DD'));
-    const t = dayjs(f.departAt).format('HH:mm');
+    setDate(dayjs.utc(f.departAt).format('YYYY-MM-DD'));
+    const t = dayjs.utc(f.departAt).format('HH:mm');
     setTime(t === '00:00' ? '' : t);
+    setArrTime(f.arriveAt ? dayjs.utc(f.arriveAt).format('HH:mm') : '');
     setProofUri(f.bookingProofUri);
     setBoardingUri(f.boardingPassUri);
     setPlatform(f.platform || '');
@@ -87,6 +89,7 @@ export default function Flights() {
         toCode: to.trim().toUpperCase(),
         dayPart: date.trim(),
         timePart: time.trim(),
+        arrTimePart: arrTime.trim() || undefined,
         price: Number(price) || 0,
         currency: trip.baseCurrency,
         platform: platform.trim() || undefined,
@@ -159,7 +162,7 @@ export default function Flights() {
                 <View style={styles.simpleRow}>
                   <View style={styles.simpleItem}>
                     <Ionicons name="calendar-outline" size={15} color={colors.textMuted} />
-                    <Text style={styles.simpleText}>{fmtDate(f.departAt, 'MMM D, YYYY')}</Text>
+                    <Text style={styles.simpleText}>{fmtDateUtc(f.departAt, 'MMM D, YYYY')}</Text>
                   </View>
                   <View style={styles.simpleItem}>
                     <Ionicons name="time-outline" size={15} color={colors.textMuted} />
@@ -174,7 +177,7 @@ export default function Flights() {
                 {hasRoute(f) && (
                   <View>
                     <Text style={styles.footLabel}>Date</Text>
-                    <Text style={styles.footValue}>{fmtDate(f.departAt, 'MMM D, YYYY')}</Text>
+                    <Text style={styles.footValue}>{fmtDateUtc(f.departAt, 'MMM D, YYYY')}</Text>
                   </View>
                 )}
                 {!!f.platform && (
@@ -227,9 +230,10 @@ export default function Flights() {
               <View style={{ flex: 1 }}><Field label="To" placeholder="NRT" value={to} onChangeText={setTo} autoCapitalize="characters" maxLength={4} /></View>
             </View>
             <Field label={`Price (${trip.baseCurrency})`} icon="cash-outline" placeholder="0" keyboardType="numeric" value={price} onChangeText={setPrice} />
+            <Field label="Date *" icon="calendar-outline" placeholder="YYYY-MM-DD" value={date} onChangeText={setDate} autoCapitalize="none" />
             <View style={{ flexDirection: 'row', gap: spacing.md }}>
-              <View style={{ flex: 1.4 }}><Field label="Date *" placeholder="YYYY-MM-DD" value={date} onChangeText={setDate} autoCapitalize="none" /></View>
-              <View style={{ flex: 1 }}><Field label="Time" placeholder="HH:mm" value={time} onChangeText={setTime} autoCapitalize="none" /></View>
+              <View style={{ flex: 1 }}><Field label="Departure time" placeholder="HH:mm" value={time} onChangeText={setTime} autoCapitalize="none" /></View>
+              <View style={{ flex: 1 }}><Field label="Arrival time" placeholder="HH:mm" value={arrTime} onChangeText={setArrTime} autoCapitalize="none" /></View>
             </View>
             <Field label="Booked via (optional)" icon="globe-outline" placeholder="e.g. MakeMyTrip, direct" value={platform} onChangeText={setPlatform} autoCapitalize="none" />
 

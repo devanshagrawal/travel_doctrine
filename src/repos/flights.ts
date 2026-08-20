@@ -56,7 +56,8 @@ export interface SaveFlightInput {
   fromCode: string;
   toCode: string;
   dayPart: string; // YYYY-MM-DD
-  timePart: string; // HH:mm ('' → none)
+  timePart: string; // departure HH:mm ('' → none)
+  arrTimePart?: string; // arrival HH:mm ('' → none)
   price: number; // 0 = no price
   currency: string;
   platform?: string;
@@ -69,6 +70,7 @@ export interface SaveFlightInput {
 // entry in sync (each an idempotent upsert keyed by the flight id).
 export async function saveFlight(a: SaveFlightInput): Promise<void> {
   const departAt = `${a.dayPart}T${a.timePart || '00:00'}:00`;
+  const arriveAt = a.arrTimePart ? `${a.dayPart}T${a.arrTimePart}:00` : null;
   // Upload any newly-picked images so the flight row and its linked document
   // store durable URLs, not local file:// paths.
   const proofUri = await ensureRemote(a.proofUri, 'documents');
@@ -78,6 +80,7 @@ export async function saveFlight(a: SaveFlightInput): Promise<void> {
     from_code: a.fromCode,
     to_code: a.toCode,
     depart_at: departAt,
+    arrive_at: arriveAt,
     price: a.price || null,
     currency: a.currency,
     platform: a.platform ?? null,
