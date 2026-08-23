@@ -8,6 +8,7 @@ import { useTheme } from '../../../../src/theme/useTheme';
 import { Avatar } from '../../../../src/components/Avatar';
 import { Field, Button } from '../../../../src/components/ui';
 import { notify, confirmAction } from '../../../../src/lib/confirm';
+import { shareInvite } from '../../../../src/lib/invite';
 import { Palette, font, radius, spacing } from '../../../../src/theme';
 import { Collaborator } from '../../../../src/lib/types';
 
@@ -64,18 +65,14 @@ export default function ShareTrip() {
         <Field placeholder="name@example.com" icon="mail-outline" keyboardType="email-address" autoCapitalize="none" value={email} onChangeText={setEmail} />
         <Field placeholder="Name (optional)" icon="person-outline" value={name} onChangeText={setName} />
         <Button label={inviteMember.isPending ? 'Sending…' : 'Send invite'} icon="add" onPress={invite} disabled={!validEmail || inviteMember.isPending} full />
-
-        <Pressable style={styles.linkRow} onPress={() => notify('Invite link copied', 'A shareable invite link has been copied to your clipboard (mock).')}>
-          <Ionicons name="link-outline" size={18} color={colors.primary} />
-          <Text style={styles.linkText}>Copy invite link</Text>
-        </Pressable>
+        <Text style={styles.inviteHint}>They appear below as “Pending” — tap the link icon to send them a join link (they must sign in with that email).</Text>
 
         {/* Crew list */}
         <Text style={[styles.label, { marginTop: spacing.xl }]}>On this trip · {crew.length}</Text>
 
-        {owner && <CrewRow c={owner} canRemove={false} onRemove={() => {}} />}
+        {owner && <CrewRow c={owner} canRemove={false} onRemove={() => {}} onShare={() => {}} />}
         {editors.map((c) => (
-          <CrewRow key={c.id} c={c} canRemove onRemove={() => confirmRemove(c)} />
+          <CrewRow key={c.id} c={c} canRemove onRemove={() => confirmRemove(c)} onShare={() => shareInvite(c.id, trip.name, c.email)} />
         ))}
 
         <View style={{ height: 40 }} />
@@ -84,7 +81,7 @@ export default function ShareTrip() {
   );
 }
 
-function CrewRow({ c, canRemove, onRemove }: { c: Collaborator; canRemove: boolean; onRemove: () => void }) {
+function CrewRow({ c, canRemove, onRemove, onShare }: { c: Collaborator; canRemove: boolean; onRemove: () => void; onShare: () => void }) {
   const { colors } = useTheme();
   const styles = makeStyles(colors);
   return (
@@ -94,8 +91,13 @@ function CrewRow({ c, canRemove, onRemove }: { c: Collaborator; canRemove: boole
         <Text style={styles.crewName}>{c.name}{c.isMe ? ' (you)' : ''}</Text>
         <Text style={styles.crewEmail} numberOfLines={1}>{c.email}</Text>
       </View>
-      <View style={[styles.roleChip, { backgroundColor: c.role === 'owner' ? colors.accentSoft : colors.surfaceAlt }]}>
-        <Text style={[styles.roleText, { color: c.role === 'owner' ? colors.accent : colors.textMuted }]}>{c.role === 'owner' ? 'Owner' : 'Editor'}</Text>
+      {c.pending && (
+        <Pressable hitSlop={8} onPress={onShare} style={styles.shareBtn}>
+          <Ionicons name="share-social-outline" size={16} color={colors.primary} />
+        </Pressable>
+      )}
+      <View style={[styles.roleChip, { backgroundColor: c.pending ? colors.warningSoft : c.role === 'owner' ? colors.accentSoft : colors.surfaceAlt }]}>
+        <Text style={[styles.roleText, { color: c.pending ? colors.warning : c.role === 'owner' ? colors.accent : colors.textMuted }]}>{c.pending ? 'Pending' : c.role === 'owner' ? 'Owner' : 'Editor'}</Text>
       </View>
       {canRemove && (
         <Pressable hitSlop={8} onPress={onRemove} style={{ marginLeft: 8 }}>
@@ -113,8 +115,8 @@ const makeStyles = (colors: Palette) => StyleSheet.create({
   heroTitle: { fontSize: 22, color: colors.text },
   heroSub: { fontSize: font.size.sm, color: colors.textMuted, textAlign: 'center', marginTop: 6, lineHeight: 20, paddingHorizontal: spacing.md },
   label: { fontSize: font.size.sm, fontWeight: font.weight.semibold, color: colors.textMuted, marginBottom: 8, marginTop: spacing.md },
-  linkRow: { flexDirection: 'row', alignItems: 'center', gap: 8, alignSelf: 'center', marginTop: spacing.md, paddingVertical: spacing.sm },
-  linkText: { fontSize: font.size.sm, fontWeight: font.weight.semibold, color: colors.primary },
+  inviteHint: { fontSize: font.size.xs, color: colors.textMuted, marginTop: spacing.sm, lineHeight: 17 },
+  shareBtn: { width: 30, height: 30, borderRadius: 15, backgroundColor: colors.primarySoft, alignItems: 'center', justifyContent: 'center', marginRight: 8 },
   crewRow: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.md, marginBottom: spacing.sm, borderWidth: 1, borderColor: colors.border },
   crewName: { fontSize: font.size.md, fontWeight: font.weight.semibold, color: colors.text },
   crewEmail: { fontSize: font.size.sm, color: colors.textMuted, marginTop: 1 },

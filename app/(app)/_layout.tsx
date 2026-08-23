@@ -2,12 +2,14 @@ import { Redirect, Stack } from 'expo-router';
 import { View, ActivityIndicator } from 'react-native';
 import { useAuth } from '../../src/lib/auth';
 import { useRealtimeSync } from '../../src/hooks/useRealtimeSync';
+import { usePendingJoin } from '../../src/hooks/usePendingJoin';
 import { useTheme } from '../../src/theme/useTheme';
 
 export default function AppLayout() {
   const { session, loading } = useAuth();
   const { colors, fonts } = useTheme();
   useRealtimeSync(!!session);
+  usePendingJoin(!!session);
   if (loading) {
     return (
       <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.bg }}>

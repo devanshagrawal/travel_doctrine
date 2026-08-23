@@ -20,6 +20,7 @@ export function rowToCollaborator(r: MemberRow, meId: string | null): Collaborat
     avatarColor: r.avatar_color,
     role: r.role,
     isMe: !!meId && r.user_id === meId,
+    pending: !r.user_id,
   };
 }
 
@@ -64,4 +65,12 @@ export async function inviteMember(tripId: string, name: string, email: string):
 export async function removeMember(id: string): Promise<void> {
   const { error } = await supabase.from('trip_members').delete().eq('id', id);
   if (error) throw error;
+}
+
+// Redeem an email-locked invite link (the pending member row's id). Returns
+// the trip_id on success; throws with a friendly message otherwise.
+export async function redeemInvite(memberId: string): Promise<string> {
+  const { data, error } = await supabase.rpc('redeem_invite', { p_member: memberId });
+  if (error) throw error;
+  return data as string;
 }

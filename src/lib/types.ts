@@ -52,6 +52,8 @@ export interface Expense {
   splitWith?: string[]; // collaborator ids sharing the cost equally
   paidFrom?: 'regular' | 'cash'; // 'cash' draws the cash wallet & isn't re-counted (Model A)
   sourceId?: string; // if auto-created from a flight/hotel, that record's id
+  receiptUri?: string; // an attached receipt/scan image
+  status?: 'pending' | 'confirmed'; // 'pending' = scanned, awaiting review (not counted)
 }
 
 // A foreign-cash pool for a trip. You "load" cash (counted as spent then),
@@ -128,6 +130,7 @@ export interface Hotel {
   currency?: CurrencyCode;
   platform?: string; // where it was booked (e.g. Booking.com, direct)
   proofUri?: string;
+  city?: string; // for the map search (e.g. "Lisbon")
   // Optional extras (kept for seed data; the quick-add form omits them).
   address?: string;
   confirmationNo?: string;
@@ -164,6 +167,7 @@ export interface Collaborator {
   avatarColor: string;
   role: CollaboratorRole;
   isMe?: boolean; // marks the current signed-in user's own row
+  pending?: boolean; // invited but hasn't joined yet (no linked account)
 }
 
 export interface Trip {
