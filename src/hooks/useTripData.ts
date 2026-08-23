@@ -83,6 +83,31 @@ export function useDeleteExpense(tripId: string) {
     },
   });
 }
+export function useAttachReceipt(tripId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, uri }: { id: string; uri: string }) => expensesRepo.attachReceipt(id, uri),
+    onSuccess: () => qc.invalidateQueries({ queryKey: keys.expenses(tripId) }),
+  });
+}
+export function useCreatePendingScan(tripId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ imageUri, baseCurrency }: { imageUri: string; baseCurrency: string }) =>
+      expensesRepo.createPendingScan(tripId, imageUri, baseCurrency),
+    onSuccess: () => qc.invalidateQueries({ queryKey: keys.expenses(tripId) }),
+  });
+}
+export function useApproveExpense(tripId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, patch }: { id: string; patch?: Partial<Expense> }) => expensesRepo.approveExpense(id, patch),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: keys.expenses(tripId) });
+      qc.invalidateQueries({ queryKey: keys.allExpenses });
+    },
+  });
+}
 export function useLoadCash(tripId: string) {
   const qc = useQueryClient();
   return useMutation({

@@ -1,6 +1,7 @@
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView, Pressable, Modal } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Pressable, Modal, Image } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import * as ImagePicker from 'expo-image-picker';
 import { Ionicons } from '@expo/vector-icons';
 import dayjs from 'dayjs';
 import { confirmAction, notify } from '../../../../src/lib/confirm';
@@ -14,8 +15,12 @@ import {
   useDeleteExpense,
   useLoadCash,
   useAdjustCash,
+  useAttachReceipt,
+  useCreatePendingScan,
+  useApproveExpense,
 } from '../../../../src/hooks/useTripData';
 import { Button, Field, EmptyState } from '../../../../src/components/ui';
+import { ImageViewer } from '../../../../src/components/ImageViewer';
 import { font, radius, shadow, spacing, Palette } from '../../../../src/theme';
 import { useTheme } from '../../../../src/theme/useTheme';
 import { CURRENCIES, convert, currencyMeta, formatMoney } from '../../../../src/lib/currency';
@@ -36,6 +41,9 @@ export default function Expenses() {
   const deleteExpense = useDeleteExpense(id);
   const loadCash = useLoadCash(id);
   const adjustCash = useAdjustCash(id);
+  const attachReceipt = useAttachReceipt(id);
+  const createPendingScan = useCreatePendingScan(id);
+  const approveExpense = useApproveExpense(id);
 
   const crew = collaborators.filter((c) => c.tripId === id);
   const me = crew.find((c) => c.isMe) ?? crew[0];
@@ -54,12 +62,21 @@ export default function Expenses() {
   const [loadingCash, setLoadingCash] = React.useState(false);
   const [cashCur, setCashCur] = React.useState(trip?.baseCurrency || 'USD');
   const [cashAmt, setCashAmt] = React.useState('');
+  const [receiptUri, setReceiptUri] = React.useState<string | undefined>(undefined);
+  const [viewer, setViewer] = React.useState<{ uri: string; title: string } | null>(null);
+  const [reviewing, setReviewing] = React.useState<string | null>(null);
+  const [rDesc, setRDesc] = React.useState('');
+  const [rAmount, setRAmount] = React.useState('');
+  const [rCategoryId, setRCategoryId] = React.useState<string | null>(null);
 
   if (!trip) return null;
   const tripCats = categories.filter((c) => c.tripId === trip.id);
-  const list = expenses
+  const all = expenses
     .filter((e) => e.tripId === trip.id)
     .sort((a, b) => (a.spentAt < b.spentAt ? 1 : -1));
+  const pendingList = all.filter((e) => e.status === 'pending');
+  const list = all.filter((e) => e.status !== 'pending');
+  const reviewingExpense = pendingList.find((e) => e.id === reviewing);
   const summary = budgetSummary(expenses, trip);
   const nameFor = (cid?: string) => crew.find((c) => c.id === cid)?.name ?? 'Me';
 
@@ -73,14 +90,19 @@ export default function Expenses() {
   const toggleParticipant = (cid: string) =>
     setParticipants((p) => (p.includes(cid) ? p.filter((x) => x !== cid) : [...p, cid]));
 
-  const reset = () => { setDesc(''); setAmount(''); setCurrency(trip.baseCurrency); setCategoryId(null); setSplitOn(false); setPaySource('regular'); setAdding(false); };
+  const reset = () => { setDesc(''); setAmount(''); setCurrency(trip.baseCurrency); setCategoryId(null); setSplitOn(false); setPaySource('regular'); setReceiptUri(undefined); setAdding(false); };
+  const pickReceipt = async (setter: (u: string) => void) => {
+    const res = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, quality: 0.6 });
+    if (!res.canceled) setter(res.assets[0].uri);
+  };
+  const attachToRow = (expenseId: string) => pickReceipt((uri) => attachReceipt.mutate({ id: expenseId, uri }));
   const save = async () => {
     if (!desc.trim() || !Number(amount) || addExpense.isPending) return;
     const amt = Number(amount);
     try {
       // Cash spend (Model A): draws the wallet, currency = wallet currency, not re-counted.
       if (paySource === 'cash' && wallet) {
-        await addExpense.mutateAsync({ tripId: trip.id, categoryId, amount: amt, currency: wallet.currency, description: desc.trim(), spentAt: dayjs().format('YYYY-MM-DD'), paidBy: nameFor(me?.id), paidFrom: 'cash' });
+        await addExpense.mutateAsync({ tripId: trip.id, categoryId, amount: amt, currency: wallet.currency, description: desc.trim(), spentAt: dayjs().format('YYYY-MM-DD'), paidBy: nameFor(me?.id), paidFrom: 'cash', receiptUri });
         await adjustCash.mutateAsync({ walletId: wallet.id, delta: -amt });
         reset();
         return;
@@ -98,6 +120,7 @@ export default function Expenses() {
         splitType: shared ? 'equal' : 'none',
         splitWith: shared ? participants : undefined,
         paidFrom: 'regular',
+        receiptUri,
       });
       reset();
     } catch (e: any) {
@@ -126,6 +149,30 @@ export default function Expenses() {
     });
 
   const catFor = (cid: string | null) => tripCats.find((c) => c.id === cid);
+
+  // --- scanned-receipt review ---
+  const scanReceipt = () => pickReceipt((uri) => createPendingScan.mutate({ imageUri: uri, baseCurrency: trip.baseCurrency }));
+  const openReview = (e: { id: string; description: string; amount: number; categoryId: string | null }) => {
+    setReviewing(e.id);
+    setRDesc(e.description === 'Scanning receipt…' ? '' : e.description);
+    setRAmount(e.amount ? String(e.amount) : '');
+    setRCategoryId(e.categoryId);
+  };
+  const closeReview = () => setReviewing(null);
+  const approve = async () => {
+    if (!reviewing || !rDesc.trim() || !Number(rAmount) || approveExpense.isPending) return;
+    try {
+      await approveExpense.mutateAsync({ id: reviewing, patch: { description: rDesc.trim(), amount: Number(rAmount), categoryId: rCategoryId } });
+      closeReview();
+    } catch (e: any) {
+      notify('Could not approve', e?.message ?? 'Please try again.');
+    }
+  };
+  const discardReview = () => {
+    const rid = reviewing;
+    closeReview();
+    if (rid) confirmAction('Discard scan', 'Delete this scanned receipt?', () => deleteExpense.mutate(rid), { confirmLabel: 'Discard' });
+  };
 
   return (
     <View style={styles.container}>
@@ -175,7 +222,30 @@ export default function Expenses() {
           </Pressable>
         )}
 
-        {list.length === 0 ? (
+        {/* Scanned receipts awaiting review */}
+        {pendingList.length > 0 && (
+          <>
+            <View style={styles.reviewHead}>
+              <Ionicons name="scan-outline" size={15} color={colors.accent} />
+              <Text style={styles.reviewHeadText}>Needs review · {pendingList.length}</Text>
+            </View>
+            {pendingList.map((e) => {
+              const scanning = e.description === 'Scanning receipt…' || !e.amount;
+              return (
+                <Pressable key={e.id} style={styles.pendingItem} onPress={() => openReview(e)}>
+                  {e.receiptUri ? <Image source={{ uri: e.receiptUri }} style={styles.pendingThumb} /> : <View style={styles.pendingThumb} />}
+                  <View style={{ flex: 1, marginLeft: spacing.md }}>
+                    <Text style={styles.itemDesc} numberOfLines={1}>{scanning ? 'Scanning receipt…' : e.description}</Text>
+                    <Text style={styles.itemMeta}>{scanning ? 'Reading with AI — tap to review' : `${formatMoney(e.amount, e.currency)} · tap to review`}</Text>
+                  </View>
+                  <View style={styles.reviewPill}><Text style={styles.reviewPillText}>Review</Text></View>
+                </Pressable>
+              );
+            })}
+          </>
+        )}
+
+        {list.length === 0 && pendingList.length === 0 ? (
           <EmptyState icon="receipt-outline" title="No expenses yet" subtitle="Log what you spend and watch the budget meter update instantly." cta="Add expense" onCta={openAdd} />
         ) : (
           list.map((e) => {
@@ -208,6 +278,15 @@ export default function Expenses() {
                     <Text style={styles.itemOrig}>{formatMoney(e.amount, e.currency)}</Text>
                   )}
                 </View>
+                {e.receiptUri ? (
+                  <Pressable hitSlop={6} onPress={() => setViewer({ uri: e.receiptUri!, title: e.description })} style={styles.receiptThumbWrap}>
+                    <Image source={{ uri: e.receiptUri }} style={styles.receiptThumb} />
+                  </Pressable>
+                ) : !e.sourceId ? (
+                  <Pressable hitSlop={6} onPress={() => attachToRow(e.id)} style={styles.attachBtn}>
+                    <Ionicons name="camera-outline" size={16} color={colors.textMuted} />
+                  </Pressable>
+                ) : null}
                 {e.sourceId ? (
                   <Pressable
                     hitSlop={8}
@@ -233,7 +312,10 @@ export default function Expenses() {
         <View style={{ height: 90 }} />
       </ScrollView>
 
-      {/* FAB */}
+      {/* FABs */}
+      <Pressable style={styles.scanFab} onPress={scanReceipt}>
+        <Ionicons name="scan-outline" size={22} color={colors.white} />
+      </Pressable>
       <Pressable style={styles.fab} onPress={openAdd}>
         <Ionicons name="add" size={28} color={colors.white} />
       </Pressable>
@@ -341,6 +423,23 @@ export default function Expenses() {
               </>
             )}
 
+            <Text style={styles.label}>Receipt (optional)</Text>
+            <Pressable style={styles.receiptBox} onPress={() => pickReceipt(setReceiptUri)}>
+              {receiptUri ? (
+                <Image source={{ uri: receiptUri }} style={styles.receiptPreview} />
+              ) : (
+                <>
+                  <Ionicons name="camera-outline" size={22} color={colors.primary} />
+                  <Text style={styles.receiptBoxText}>Snap or upload a receipt</Text>
+                </>
+              )}
+            </Pressable>
+            {!!receiptUri && (
+              <Pressable onPress={() => setReceiptUri(undefined)} style={{ alignSelf: 'flex-start', marginTop: 6 }}>
+                <Text style={styles.removeReceipt}>Remove receipt</Text>
+              </Pressable>
+            )}
+
             <Button label={addExpense.isPending ? 'Saving…' : 'Save expense'} onPress={save} disabled={!desc.trim() || !Number(amount) || addExpense.isPending || (paySource === 'cash' && !!wallet && Number(amount) > wallet.balance)} full style={{ marginTop: spacing.md, marginBottom: spacing.xl }} />
           </ScrollView>
         </View>
@@ -370,6 +469,39 @@ export default function Expenses() {
           </ScrollView>
         </View>
       </Modal>
+
+      {/* Review scanned receipt */}
+      <Modal visible={!!reviewing} animationType="slide" transparent onRequestClose={closeReview}>
+        <Pressable style={styles.backdrop} onPress={closeReview} />
+        <View style={styles.sheet}>
+          <View style={styles.handle} />
+          <Text style={styles.sheetTitle}>Review scanned receipt</Text>
+          {reviewingExpense && (
+            <ScrollView keyboardShouldPersistTaps="handled">
+              {reviewingExpense.receiptUri && (
+                <Pressable onPress={() => setViewer({ uri: reviewingExpense.receiptUri!, title: 'Receipt' })}>
+                  <Image source={{ uri: reviewingExpense.receiptUri }} style={styles.reviewImg} />
+                </Pressable>
+              )}
+              <Field label="Description" placeholder="e.g. Dinner at izakaya" value={rDesc} onChangeText={setRDesc} />
+              <Field label={`Amount (${reviewingExpense.currency})`} placeholder="0" keyboardType="numeric" value={rAmount} onChangeText={setRAmount} />
+              <Text style={styles.label}>Category</Text>
+              <View style={styles.catWrap}>
+                {tripCats.map((c) => (
+                  <Pressable key={c.id} onPress={() => setRCategoryId(c.id)} style={[styles.catChip, rCategoryId === c.id && { backgroundColor: c.color, borderColor: c.color }]}>
+                    <Ionicons name={c.icon as any} size={14} color={rCategoryId === c.id ? colors.white : c.color} />
+                    <Text style={[styles.catText, rCategoryId === c.id && { color: colors.white }]}>{c.name}</Text>
+                  </Pressable>
+                ))}
+              </View>
+              <Button label={approveExpense.isPending ? 'Approving…' : 'Approve'} onPress={approve} disabled={!rDesc.trim() || !Number(rAmount) || approveExpense.isPending} full style={{ marginTop: spacing.md }} />
+              <Button label="Discard" icon="trash-outline" variant="danger" onPress={discardReview} full style={{ marginTop: spacing.sm, marginBottom: spacing.xl }} />
+            </ScrollView>
+          )}
+        </View>
+      </Modal>
+
+      <ImageViewer uri={viewer?.uri} title={viewer?.title} onClose={() => setViewer(null)} />
     </View>
   );
 }
@@ -411,6 +543,14 @@ const makeStyles = (colors: Palette) => StyleSheet.create({
   deleteBtn: { width: 32, height: 32, borderRadius: 16, backgroundColor: colors.dangerSoft, alignItems: 'center', justifyContent: 'center', marginLeft: 4 },
   linkedBtn: { width: 32, height: 32, borderRadius: 16, backgroundColor: colors.surfaceAlt, alignItems: 'center', justifyContent: 'center', marginLeft: 4 },
   fab: { position: 'absolute', right: spacing.lg, bottom: spacing.xl, width: 56, height: 56, borderRadius: 28, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center', ...shadow.floating },
+  scanFab: { position: 'absolute', right: spacing.lg + 6, bottom: spacing.xl + 66, width: 44, height: 44, borderRadius: 22, backgroundColor: colors.accent, alignItems: 'center', justifyContent: 'center', ...shadow.floating },
+  reviewHead: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: spacing.sm, marginTop: spacing.xs },
+  reviewHeadText: { fontSize: font.size.xs, fontWeight: font.weight.bold, color: colors.accent, textTransform: 'uppercase', letterSpacing: 0.6 },
+  pendingItem: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.accentSoft, borderRadius: radius.md, padding: spacing.md, marginBottom: spacing.sm, borderWidth: 1, borderColor: colors.accent + '55' },
+  pendingThumb: { width: 38, height: 38, borderRadius: 8, backgroundColor: colors.surfaceAlt },
+  reviewPill: { backgroundColor: colors.accent, paddingHorizontal: 12, paddingVertical: 7, borderRadius: radius.pill },
+  reviewPillText: { color: '#FCF7EE', fontSize: font.size.xs, fontWeight: font.weight.bold },
+  reviewImg: { width: '100%', height: 180, borderRadius: radius.md, backgroundColor: colors.surfaceAlt, marginBottom: spacing.md },
   backdrop: { flex: 1, backgroundColor: 'rgba(15,23,42,0.4)' },
   sheet: { backgroundColor: colors.surface, borderTopLeftRadius: radius.xl, borderTopRightRadius: radius.xl, paddingHorizontal: spacing.lg, maxHeight: '86%' },
   handle: { width: 40, height: 4, borderRadius: 2, backgroundColor: colors.border, alignSelf: 'center', marginTop: spacing.md, marginBottom: spacing.md },
@@ -423,4 +563,11 @@ const makeStyles = (colors: Palette) => StyleSheet.create({
   catChip: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 12, paddingVertical: 8, borderRadius: radius.pill, backgroundColor: colors.surfaceAlt, borderWidth: 1, borderColor: colors.border },
   catText: { fontSize: font.size.sm, fontWeight: font.weight.semibold, color: colors.text },
   convHint: { fontSize: font.size.sm, color: colors.primary, fontWeight: font.weight.medium, marginTop: 4 },
+  receiptThumbWrap: { marginLeft: 4 },
+  receiptThumb: { width: 34, height: 34, borderRadius: 8, backgroundColor: colors.surfaceAlt },
+  attachBtn: { width: 32, height: 32, borderRadius: 16, backgroundColor: colors.surfaceAlt, alignItems: 'center', justifyContent: 'center', marginLeft: 4 },
+  receiptBox: { height: 96, borderRadius: radius.md, borderWidth: 1.5, borderColor: colors.border, borderStyle: 'dashed', alignItems: 'center', justifyContent: 'center', backgroundColor: colors.surfaceAlt, overflow: 'hidden' },
+  receiptPreview: { width: '100%', height: '100%' },
+  receiptBoxText: { fontSize: font.size.sm, color: colors.textMuted, marginTop: 6 },
+  removeReceipt: { color: colors.danger, fontSize: font.size.sm, fontWeight: font.weight.semibold },
 });

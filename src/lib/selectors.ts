@@ -4,9 +4,12 @@ import { convert } from './currency';
 // Total spent on a trip, expressed in the trip's base currency.
 // Cash spends (paidFrom === 'cash') are excluded — the cash was already
 // counted when it was loaded (Model A), so counting it again would double-up.
+// Pending (unreviewed scanned) expenses don't count until a member approves.
+const counts = (e: Expense) => e.paidFrom !== 'cash' && e.status !== 'pending';
+
 export function spentForTrip(expenses: Expense[], trip: Trip): number {
   return expenses
-    .filter((e) => e.tripId === trip.id && e.paidFrom !== 'cash')
+    .filter((e) => e.tripId === trip.id && counts(e))
     .reduce((sum, e) => sum + convert(e.amount, e.currency, trip.baseCurrency), 0);
 }
 
@@ -26,7 +29,7 @@ export function spendByCategory(
   trip: Trip
 ): CategorySpend[] {
   const cats = categories.filter((c) => c.tripId === trip.id);
-  const tripExpenses = expenses.filter((e) => e.tripId === trip.id && e.paidFrom !== 'cash');
+  const tripExpenses = expenses.filter((e) => e.tripId === trip.id && counts(e));
 
   const rows: CategorySpend[] = cats.map((c) => ({
     category: c,
@@ -88,7 +91,7 @@ export function tripBalances(
 
   // Shared expenses: payer fronts the whole amount; participants each owe a share.
   expenses
-    .filter((e) => e.tripId === trip.id && e.splitType === 'equal' && (e.splitWith?.length ?? 0) > 0 && e.paidById)
+    .filter((e) => e.tripId === trip.id && e.status !== 'pending' && e.splitType === 'equal' && (e.splitWith?.length ?? 0) > 0 && e.paidById)
     .forEach((e) => {
       const amt = convert(e.amount, e.currency, trip.baseCurrency);
       const parts = e.splitWith!.filter((id) => id in net);
