@@ -13,6 +13,7 @@ interface HotelRow {
   currency: string | null;
   platform: string | null;
   proof_uri: string | null;
+  city: string | null;
   address: string | null;
   confirmation_no: string | null;
   price_per_night: number | null;
@@ -29,6 +30,7 @@ function rowToHotel(r: HotelRow): Hotel {
     currency: r.currency ?? undefined,
     platform: r.platform ?? undefined,
     proofUri: r.proof_uri ?? undefined,
+    city: r.city ?? undefined,
     address: r.address ?? undefined,
     confirmationNo: r.confirmation_no ?? undefined,
     pricePerNight: r.price_per_night ?? undefined,
@@ -50,6 +52,7 @@ export interface SaveHotelInput {
   price: number; // 0 = no price
   currency: string;
   platform?: string;
+  city?: string;
   categoryId: string | null;
   proofUri?: string;
 }
@@ -63,6 +66,7 @@ export async function saveHotel(a: SaveHotelInput): Promise<void> {
     total_price: a.price || null,
     currency: a.currency,
     platform: a.platform ?? null,
+    city: a.city ?? null,
     proof_uri: proofUri ?? null,
   };
 

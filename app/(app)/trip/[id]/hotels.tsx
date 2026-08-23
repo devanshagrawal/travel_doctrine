@@ -12,6 +12,7 @@ import { fmtDate, nights } from '../../../../src/lib/format';
 import { formatMoney } from '../../../../src/lib/currency';
 import { findCategoryId } from '../../../../src/lib/selectors';
 import { confirmAction, notify } from '../../../../src/lib/confirm';
+import { openInMaps } from '../../../../src/lib/maps';
 import { ImageViewer } from '../../../../src/components/ImageViewer';
 import { Hotel } from '../../../../src/lib/types';
 
@@ -35,13 +36,14 @@ export default function Hotels() {
   const [checkOut, setCheckOut] = React.useState('');
   const [proofUri, setProofUri] = React.useState<string | undefined>(undefined);
   const [platform, setPlatform] = React.useState('');
+  const [city, setCity] = React.useState('');
 
   if (!trip) return null;
   const list = hotels.filter((h) => h.tripId === trip.id).sort((a, b) => (a.checkIn > b.checkIn ? 1 : -1));
 
   const close = () => {
     setAdding(false); setEditingId(null);
-    setName(''); setPrice(''); setCheckIn(''); setCheckOut(''); setProofUri(undefined); setPlatform('');
+    setName(''); setPrice(''); setCheckIn(''); setCheckOut(''); setProofUri(undefined); setPlatform(''); setCity('');
   };
 
   const openAdd = () => { close(); setAdding(true); };
@@ -54,6 +56,7 @@ export default function Hotels() {
     setCheckOut(h.checkOut);
     setProofUri(h.proofUri);
     setPlatform(h.platform || '');
+    setCity(h.city || '');
     setAdding(true);
   };
 
@@ -76,6 +79,7 @@ export default function Hotels() {
         price: Number(price) || 0,
         currency: trip.baseCurrency,
         platform: platform.trim() || undefined,
+        city: city.trim() || undefined,
         categoryId: findCategoryId(categories, trip.id, ['hotel', 'stay', 'villa', 'accom', 'lodg']),
         proofUri,
       });
@@ -122,8 +126,12 @@ export default function Hotels() {
                   <View style={{ flex: 1 }}>
                     <Text style={styles.hotelName}>{h.name}</Text>
                     {h.address && <Text style={styles.hotelAddr} numberOfLines={1}>{h.address}</Text>}
+                    {!!h.city && <Text style={styles.hotelAddr} numberOfLines={1}>{h.city}</Text>}
                     {!!h.platform && <Text style={styles.hotelAddr} numberOfLines={1}>Booked via {h.platform}</Text>}
                   </View>
+                  <Pressable hitSlop={8} onPress={() => openInMaps(h.name, h.address, h.city)} style={styles.editBtn}>
+                    <Ionicons name="map-outline" size={17} color={colors.primary} />
+                  </Pressable>
                   <Pressable hitSlop={8} onPress={() => openEdit(h)} style={styles.editBtn}>
                     <Ionicons name="create-outline" size={18} color={colors.textMuted} />
                   </Pressable>
@@ -183,6 +191,7 @@ export default function Hotels() {
           <Text style={styles.sheetHint}>Price and proof auto-fill your expenses, documents & itinerary.</Text>
           <ScrollView keyboardShouldPersistTaps="handled">
             <Field label="Hotel name" icon="bed-outline" placeholder="e.g. Shinjuku Granbell" value={name} onChangeText={setName} />
+            <Field label="City / area (optional)" icon="location-outline" placeholder="e.g. Lisbon" value={city} onChangeText={setCity} />
             <Field label={`Price (${trip.baseCurrency})`} icon="cash-outline" placeholder="Total for the stay" keyboardType="numeric" value={price} onChangeText={setPrice} />
             <View style={{ flexDirection: 'row', gap: spacing.md }}>
               <View style={{ flex: 1 }}><Field label="Check-in *" placeholder="YYYY-MM-DD" value={checkIn} onChangeText={setCheckIn} autoCapitalize="none" /></View>

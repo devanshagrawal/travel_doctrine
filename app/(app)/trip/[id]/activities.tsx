@@ -12,6 +12,7 @@ import { fmtDate } from '../../../../src/lib/format';
 import { formatMoney } from '../../../../src/lib/currency';
 import { findCategoryId } from '../../../../src/lib/selectors';
 import { confirmAction, notify } from '../../../../src/lib/confirm';
+import { openInMaps } from '../../../../src/lib/maps';
 import { ImageViewer } from '../../../../src/components/ImageViewer';
 import { Activity } from '../../../../src/lib/types';
 
@@ -125,6 +126,11 @@ export default function Activities() {
                   <Text style={styles.name}>{a.name}</Text>
                   {!!a.platform && <Text style={styles.sub} numberOfLines={1}>Booked via {a.platform}</Text>}
                 </View>
+                {!!a.location && (
+                  <Pressable hitSlop={8} onPress={() => openInMaps(a.name, a.location)} style={styles.editBtn}>
+                    <Ionicons name="map-outline" size={17} color={colors.primary} />
+                  </Pressable>
+                )}
                 <Pressable hitSlop={8} onPress={() => openEdit(a)} style={styles.editBtn}>
                   <Ionicons name="create-outline" size={18} color={colors.textMuted} />
                 </Pressable>

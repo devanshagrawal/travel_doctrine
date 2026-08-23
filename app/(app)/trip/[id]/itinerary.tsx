@@ -10,6 +10,7 @@ import { Button, Field, EmptyState } from '../../../../src/components/ui';
 import { font, radius, shadow, spacing, Palette } from '../../../../src/theme';
 import { useTheme } from '../../../../src/theme/useTheme';
 import { daysBetween, fmtDate } from '../../../../src/lib/format';
+import { openInMaps } from '../../../../src/lib/maps';
 import { ItineraryType } from '../../../../src/lib/types';
 
 const TYPE_META: Record<ItineraryType, { icon: any; color: string; label: string }> = {
@@ -100,6 +101,11 @@ export default function Itinerary() {
                           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                             <Ionicons name={meta.icon} size={15} color={meta.color} />
                             <Text style={styles.itemTitle}>{it.title}</Text>
+                            {!!it.location && (
+                              <Pressable hitSlop={8} onPress={() => openInMaps(it.title, it.location)}>
+                                <Ionicons name="map-outline" size={16} color={colors.primary} />
+                              </Pressable>
+                            )}
                           </View>
                           {it.location && (
                             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 3 }}>
