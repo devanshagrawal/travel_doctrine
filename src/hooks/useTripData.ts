@@ -126,6 +126,17 @@ export function useAdjustCash(tripId: string) {
     onSuccess: () => qc.invalidateQueries({ queryKey: keys.wallets(tripId) }),
   });
 }
+export function useDeleteCashWallet(tripId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ walletId, currency }: { walletId: string; currency: string }) => cash.deleteCashWallet(walletId, tripId, currency),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: keys.wallets(tripId) });
+      qc.invalidateQueries({ queryKey: keys.expenses(tripId) });
+      qc.invalidateQueries({ queryKey: keys.allExpenses });
+    },
+  });
+}
 export function useAddSettlement(tripId: string) {
   const qc = useQueryClient();
   return useMutation({

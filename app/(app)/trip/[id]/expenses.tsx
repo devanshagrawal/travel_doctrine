@@ -15,6 +15,7 @@ import {
   useDeleteExpense,
   useLoadCash,
   useAdjustCash,
+  useDeleteCashWallet,
   useAttachReceipt,
   useCreatePendingScan,
   useApproveExpense,
@@ -41,6 +42,7 @@ export default function Expenses() {
   const deleteExpense = useDeleteExpense(id);
   const loadCash = useLoadCash(id);
   const adjustCash = useAdjustCash(id);
+  const deleteCashWallet = useDeleteCashWallet(id);
   const attachReceipt = useAttachReceipt(id);
   const createPendingScan = useCreatePendingScan(id);
   const approveExpense = useApproveExpense(id);
@@ -129,6 +131,16 @@ export default function Expenses() {
   };
 
   const openLoadCash = () => { setCashCur(wallet?.currency ?? trip.baseCurrency); setCashAmt(''); setLoadingCash(true); };
+  const removeWallet = () => {
+    if (!wallet) return;
+    const linked = expenses.filter((e) => e.tripId === trip.id && (e.sourceId === wallet.id || (e.paidFrom === 'cash' && e.currency === wallet.currency)));
+    confirmAction(
+      'Remove cash wallet',
+      `This deletes the ${wallet.currency} cash wallet and its ${linked.length} linked expense${linked.length === 1 ? '' : 's'} (the top-up${linked.length === 1 ? '' : 's'} and any cash spends). This can't be undone.`,
+      () => deleteCashWallet.mutate({ walletId: wallet.id, currency: wallet.currency }),
+      { confirmLabel: 'Remove' }
+    );
+  };
   const saveLoadCash = async () => {
     if (!Number(cashAmt) || loadCash.isPending) return;
     try {
@@ -212,6 +224,9 @@ export default function Expenses() {
                 <Ionicons name="add" size={15} color={colors.primary} />
                 <Text style={styles.cashAddText}>Add cash</Text>
               </Pressable>
+              <Pressable hitSlop={8} onPress={removeWallet} style={styles.cashRemoveBtn}>
+                <Ionicons name="trash-outline" size={16} color={colors.danger} />
+              </Pressable>
             </View>
             <Text style={styles.cashBalance}>{formatMoney(wallet.balance, wallet.currency)} <Text style={styles.cashBalanceLabel}>left in cash</Text></Text>
           </View>
@@ -293,7 +308,9 @@ export default function Expenses() {
                     onPress={() =>
                       notify(
                         'Linked expense',
-                        'This expense comes from a flight or hotel booking. To remove it, delete that booking from the Flights or Hotels tab.'
+                        cashWallets.some((w) => w.id === e.sourceId)
+                          ? 'This is a cash top-up. To remove it, use the trash icon on the cash wallet above.'
+                          : 'This expense comes from a flight or hotel booking. To remove it, delete that booking from the Flights or Hotels tab.'
                       )
                     }
                     style={styles.linkedBtn}
@@ -535,6 +552,7 @@ const makeStyles = (colors: Palette) => StyleSheet.create({
   cashTitle: { fontSize: font.size.md, fontWeight: font.weight.bold, color: colors.text },
   cashSub: { fontSize: font.size.xs, color: colors.textMuted, marginTop: 1 },
   cashAddBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: colors.primarySoft, paddingHorizontal: 12, paddingVertical: 8, borderRadius: radius.pill },
+  cashRemoveBtn: { width: 34, height: 34, borderRadius: 17, backgroundColor: colors.dangerSoft, alignItems: 'center', justifyContent: 'center', marginLeft: 8 },
   cashAddText: { fontSize: font.size.sm, fontWeight: font.weight.semibold, color: colors.primary },
   cashBalance: { fontSize: font.size.xl, fontWeight: font.weight.bold, color: colors.text, marginTop: spacing.md },
   cashBalanceLabel: { fontSize: font.size.sm, fontWeight: font.weight.regular, color: colors.textMuted },
