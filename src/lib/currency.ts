@@ -1,8 +1,9 @@
 import { CurrencyCode } from './types';
 
-// Static exchange rates so the prototype works fully offline and is
-// deterministic for demos. Rates are expressed relative to USD (1 USD = rate).
-// Swap this for a live API (open.er-api.com) later without touching callers.
+// Exchange rates relative to USD (1 USD = rate). These are static fallbacks so
+// the app works offline / on first launch; at runtime they're overwritten with
+// live rates via applyRates() (see src/lib/rates.ts) — callers use convert()
+// unchanged and pick up whatever is in RATES.
 export const RATES: Record<CurrencyCode, number> = {
   USD: 1,
   EUR: 0.92,
@@ -17,6 +18,21 @@ export const RATES: Record<CurrencyCode, number> = {
   CHF: 0.88,
   CNY: 7.24,
 };
+
+// When the live rates in RATES were last refreshed (the provider's timestamp),
+// or null while still on the static fallback.
+export let ratesUpdatedAt: string | null = null;
+
+// Overwrite RATES in place with live values for our supported currencies.
+// Only positive numbers are applied; USD stays the 1.0 base.
+export function applyRates(rates: Record<string, number>, updatedAt?: string | null): void {
+  for (const c of CURRENCIES) {
+    const v = rates[c.code];
+    if (typeof v === 'number' && v > 0) RATES[c.code] = v;
+  }
+  RATES.USD = 1;
+  if (updatedAt !== undefined) ratesUpdatedAt = updatedAt;
+}
 
 export interface CurrencyMeta {
   code: CurrencyCode;

@@ -3,6 +3,7 @@ import { View, ActivityIndicator } from 'react-native';
 import { useAuth } from '../../src/lib/auth';
 import { useRealtimeSync } from '../../src/hooks/useRealtimeSync';
 import { usePendingJoin } from '../../src/hooks/usePendingJoin';
+import { useRates } from '../../src/hooks/useRates';
 import { useTheme } from '../../src/theme/useTheme';
 
 export default function AppLayout() {
@@ -10,6 +11,7 @@ export default function AppLayout() {
   const { colors, fonts } = useTheme();
   useRealtimeSync(!!session);
   usePendingJoin(!!session);
+  useRates(); // seed cached FX rates + refresh live so all screens use current rates
   if (loading) {
     return (
       <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.bg }}>

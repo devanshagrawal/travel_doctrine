@@ -6,12 +6,17 @@ import { font, radius, shadow, spacing, Palette } from '../../../src/theme';
 import { useTheme } from '../../../src/theme/useTheme';
 import { Masthead } from '../../../src/components/Masthead';
 import { useAuth } from '../../../src/lib/auth';
+import { useRates } from '../../../src/hooks/useRates';
+import dayjs from 'dayjs';
 
 export default function CurrencyExchanger() {
   const { colors } = useTheme();
   const styles = makeStyles(colors);
   const { user } = useAuth();
   const homeCurrency = user?.homeCurrency || 'USD';
+  const rates = useRates();
+  const updatedAt = rates.data?.updatedAt;
+  const asOf = updatedAt ? dayjs(updatedAt).format('MMM D, YYYY h:mm A') : null;
   const [amount, setAmount] = React.useState('100');
   const [from, setFrom] = React.useState('USD');
   const [to, setTo] = React.useState(homeCurrency);
@@ -34,7 +39,7 @@ export default function CurrencyExchanger() {
 
   return (
     <View style={styles.safe}>
-      <Masthead eyebrow="Offline rates · estimates" title="Currency" />
+      <Masthead eyebrow={asOf ? 'Live rates' : 'Offline rates · estimates'} title="Currency" />
       <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
         <View style={styles.card}>
           {/* From */}
@@ -82,6 +87,33 @@ export default function CurrencyExchanger() {
           1 {from} = {rate.toLocaleString('en-US', { maximumFractionDigits: 4 })} {to}
         </Text>
 
+        <View style={styles.asOfRow}>
+          <Text style={styles.asOfText}>
+            {rates.isError
+              ? 'Live rates unavailable — showing last known'
+              : asOf
+                ? `Rates as of ${asOf} UTC`
+                : rates.isFetching
+                  ? 'Fetching live rates…'
+                  : 'Estimated rates'}
+          </Text>
+          <Pressable
+            style={styles.refreshBtn}
+            onPress={() => rates.refetch()}
+            disabled={rates.isFetching}
+            hitSlop={8}
+          >
+            <Ionicons
+              name="refresh"
+              size={16}
+              color={rates.isFetching ? colors.textFaint : colors.primary}
+            />
+            <Text style={[styles.refreshText, rates.isFetching && { color: colors.textFaint }]}>
+              {rates.isFetching ? 'Refreshing' : 'Refresh'}
+            </Text>
+          </Pressable>
+        </View>
+
         <Text style={styles.sectionTitle}>Quick convert {fromMeta.symbol}{numAmount.toLocaleString()}</Text>
         <View style={styles.quickGrid}>
           {quick.map((c) => (
@@ -122,7 +154,9 @@ export default function CurrencyExchanger() {
                   <Text style={styles.pickCode}>{item.code}</Text>
                   <Text style={styles.pickName}>{item.name}</Text>
                 </View>
-                <Text style={styles.pickRate}>{RATES[item.code]}/USD</Text>
+                <Text style={styles.pickRate}>
+                  {RATES[item.code].toLocaleString('en-US', { maximumFractionDigits: 4 })}/USD
+                </Text>
               </Pressable>
             )}
           />
@@ -151,6 +185,10 @@ const makeStyles = (colors: Palette) => StyleSheet.create({
   divider: { height: 1, backgroundColor: colors.border, position: 'absolute', left: 0, right: 0, top: '50%' },
   swapBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center', ...shadow.card },
   rateLine: { textAlign: 'center', color: colors.textMuted, fontSize: font.size.sm, marginTop: spacing.md, fontWeight: font.weight.medium },
+  asOfRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 12, marginTop: 6 },
+  asOfText: { color: colors.textFaint, fontSize: font.size.xs },
+  refreshBtn: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  refreshText: { color: colors.primary, fontSize: font.size.xs, fontWeight: font.weight.semibold },
   sectionTitle: { fontSize: font.size.md, fontWeight: font.weight.bold, color: colors.text, marginTop: spacing.xl, marginBottom: spacing.md },
   quickGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' },
   quickCell: { width: '48%', flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: colors.surface, padding: spacing.md, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border, marginBottom: spacing.md },
