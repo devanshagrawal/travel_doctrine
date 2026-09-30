@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, Pressable, Image, Modal, ScrollView } from 'react-native';
-import * as ImagePicker from 'expo-image-picker';
 import { Ionicons } from '@expo/vector-icons';
+import { pickFile } from '../lib/filePicker';
 import { useDocuments, useAddDocument, useDeleteDocument } from '../hooks/useTripData';
 import { Button, Field, EmptyState, IconCircle, Pill } from './ui';
 import { font, radius, shadow, spacing, Palette } from '../theme';
@@ -10,6 +10,11 @@ import { DocumentType, TravelDocument } from '../lib/types';
 import { fmtDate } from '../lib/format';
 import { confirmAction, notify } from '../lib/confirm';
 import dayjs from 'dayjs';
+
+function isPdf(uri?: string): boolean {
+  if (!uri) return false;
+  return /\.pdf($|\?)/i.test(uri) || uri.includes('application/pdf');
+}
 
 const TYPE_META: Record<DocumentType, { icon: any; color: string; label: string }> = {
   passport: { icon: 'globe', color: '#2563EB', label: 'Passport' },
@@ -38,9 +43,9 @@ export function DocumentsView({ tripId }: { tripId: string | null }) {
 
   const list = documents.filter((d) => d.tripId === tripId);
 
-  const pickImage = async () => {
-    const res = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, quality: 0.6 });
-    if (!res.canceled) setFileUri(res.assets[0].uri);
+  const pickDoc = async () => {
+    const res = await pickFile();
+    if (res) setFileUri(res.uri);
   };
 
   const reset = () => {
@@ -77,7 +82,11 @@ export function DocumentsView({ tripId }: { tripId: string | null }) {
               return (
                 <Pressable key={d.id} style={styles.docCard} onPress={() => setViewing(d)}>
                   {d.fileUri ? (
-                    <Image source={{ uri: d.fileUri }} style={styles.thumb} />
+                    isPdf(d.fileUri) ? (
+                      <IconCircle icon="document-text" color="#EF4444" bg="#EF444418" size={48} />
+                    ) : (
+                      <Image source={{ uri: d.fileUri }} style={styles.thumb} />
+                    )
                   ) : (
                     <IconCircle icon={meta.icon} color={meta.color} bg={meta.color + '18'} size={48} />
                   )}
@@ -124,13 +133,20 @@ export function DocumentsView({ tripId }: { tripId: string | null }) {
             <Field label="Number (optional)" placeholder="Document number" value={number} onChangeText={setNumber} autoCapitalize="characters" />
             <Field label="Expiry date (optional)" placeholder="YYYY-MM-DD" value={expiry} onChangeText={setExpiry} autoCapitalize="none" />
 
-            <Pressable style={styles.uploadBox} onPress={pickImage}>
+            <Pressable style={styles.uploadBox} onPress={pickDoc}>
               {fileUri ? (
-                <Image source={{ uri: fileUri }} style={styles.uploadPreview} />
+                isPdf(fileUri) ? (
+                  <View style={styles.pdfThumb}>
+                    <Ionicons name="document-text" size={32} color={colors.primary} />
+                    <Text style={styles.pdfLabel}>PDF attached</Text>
+                  </View>
+                ) : (
+                  <Image source={{ uri: fileUri }} style={styles.uploadPreview} />
+                )
               ) : (
                 <>
                   <Ionicons name="cloud-upload-outline" size={26} color={colors.primary} />
-                  <Text style={styles.uploadText}>Upload a scan or photo</Text>
+                  <Text style={styles.uploadText}>Upload a scan, photo or PDF</Text>
                 </>
               )}
             </Pressable>
@@ -156,7 +172,14 @@ export function DocumentsView({ tripId }: { tripId: string | null }) {
               </View>
 
               {viewing.fileUri ? (
-                <Image source={{ uri: viewing.fileUri }} style={styles.detailImage} resizeMode="contain" />
+                isPdf(viewing.fileUri) ? (
+                  <View style={styles.pdfDetail}>
+                    <Ionicons name="document-text" size={40} color="#EF4444" />
+                    <Text style={styles.pdfLabel}>PDF document</Text>
+                  </View>
+                ) : (
+                  <Image source={{ uri: viewing.fileUri }} style={styles.detailImage} resizeMode="contain" />
+                )
               ) : (
                 <View style={styles.noFile}>
                   <Ionicons name="document-outline" size={28} color={colors.textFaint} />
@@ -226,4 +249,7 @@ const makeStyles = (colors: Palette) => StyleSheet.create({
   uploadBox: { height: 120, borderRadius: radius.md, borderWidth: 1.5, borderColor: colors.border, borderStyle: 'dashed', alignItems: 'center', justifyContent: 'center', backgroundColor: colors.surfaceAlt, overflow: 'hidden' },
   uploadPreview: { width: '100%', height: '100%' },
   uploadText: { fontSize: font.size.sm, color: colors.textMuted, marginTop: 6 },
+  pdfThumb: { alignItems: 'center', justifyContent: 'center', flex: 1 },
+  pdfDetail: { height: 120, borderRadius: radius.md, backgroundColor: colors.surfaceAlt, alignItems: 'center', justifyContent: 'center', marginBottom: spacing.lg },
+  pdfLabel: { fontSize: font.size.sm, color: colors.textMuted, marginTop: 6 },
 });

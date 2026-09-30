@@ -6,11 +6,12 @@ type Bucket = 'covers' | 'documents';
 
 function extFromType(t?: string): string {
   const e = (t ?? '').split('/')[1];
-  return e === 'jpeg' ? 'jpg' : e || 'jpg';
+  if (e === 'jpeg') return 'jpg';
+  if (e === 'pdf') return 'pdf';
+  return e || 'jpg';
 }
 
-// Upload a locally-picked image (blob:/data:/file: URI) to a bucket and return
-// a URL that <Image source={{ uri }} /> can render directly.
+// Upload a locally-picked file (image or PDF) to a bucket and return a URL.
 export async function uploadImage(bucket: Bucket, localUri: string): Promise<string> {
   const { data: sess } = await supabase.auth.getSession();
   const uid = sess.session?.user.id;

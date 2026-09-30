@@ -1,8 +1,8 @@
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView, Pressable, Modal, Image } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import * as ImagePicker from 'expo-image-picker';
 import { Ionicons } from '@expo/vector-icons';
+import { pickFile } from '../../../../src/lib/filePicker';
 import dayjs from 'dayjs';
 import { confirmAction, notify } from '../../../../src/lib/confirm';
 import { useTrip } from '../../../../src/hooks/useTrips';
@@ -27,6 +27,11 @@ import { useTheme } from '../../../../src/theme/useTheme';
 import { CURRENCIES, convert, currencyMeta, formatMoney } from '../../../../src/lib/currency';
 import { budgetSummary } from '../../../../src/lib/selectors';
 import { fmtDate } from '../../../../src/lib/format';
+
+function isPdf(uri?: string): boolean {
+  if (!uri) return false;
+  return /\.pdf($|\?)/i.test(uri) || uri.includes('application/pdf');
+}
 
 export default function Expenses() {
   const { colors } = useTheme();
@@ -94,8 +99,8 @@ export default function Expenses() {
 
   const reset = () => { setDesc(''); setAmount(''); setCurrency(trip.baseCurrency); setCategoryId(null); setSplitOn(false); setPaySource('regular'); setReceiptUri(undefined); setAdding(false); };
   const pickReceipt = async (setter: (u: string) => void) => {
-    const res = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, quality: 0.6 });
-    if (!res.canceled) setter(res.assets[0].uri);
+    const res = await pickFile();
+    if (res) setter(res.uri);
   };
   const attachToRow = (expenseId: string) => pickReceipt((uri) => attachReceipt.mutate({ id: expenseId, uri }));
   const save = async () => {
@@ -248,7 +253,11 @@ export default function Expenses() {
               const scanning = e.description === 'Scanning receipt…' || !e.amount;
               return (
                 <Pressable key={e.id} style={styles.pendingItem} onPress={() => openReview(e)}>
-                  {e.receiptUri ? <Image source={{ uri: e.receiptUri }} style={styles.pendingThumb} /> : <View style={styles.pendingThumb} />}
+                  {e.receiptUri ? (
+                    isPdf(e.receiptUri)
+                      ? <View style={[styles.pendingThumb, { alignItems: 'center', justifyContent: 'center' }]}><Ionicons name="document-text" size={20} color="#EF4444" /></View>
+                      : <Image source={{ uri: e.receiptUri }} style={styles.pendingThumb} />
+                  ) : <View style={styles.pendingThumb} />}
                   <View style={{ flex: 1, marginLeft: spacing.md }}>
                     <Text style={styles.itemDesc} numberOfLines={1}>{scanning ? 'Scanning receipt…' : e.description}</Text>
                     <Text style={styles.itemMeta}>{scanning ? 'Reading with AI — tap to review' : `${formatMoney(e.amount, e.currency)} · tap to review`}</Text>
@@ -295,7 +304,13 @@ export default function Expenses() {
                 </View>
                 {e.receiptUri ? (
                   <Pressable hitSlop={6} onPress={() => setViewer({ uri: e.receiptUri!, title: e.description })} style={styles.receiptThumbWrap}>
-                    <Image source={{ uri: e.receiptUri }} style={styles.receiptThumb} />
+                    {isPdf(e.receiptUri) ? (
+                      <View style={[styles.receiptThumb, { alignItems: 'center', justifyContent: 'center', backgroundColor: colors.surfaceAlt }]}>
+                        <Ionicons name="document-text" size={16} color="#EF4444" />
+                      </View>
+                    ) : (
+                      <Image source={{ uri: e.receiptUri }} style={styles.receiptThumb} />
+                    )}
                   </Pressable>
                 ) : !e.sourceId ? (
                   <Pressable hitSlop={6} onPress={() => attachToRow(e.id)} style={styles.attachBtn}>
@@ -443,11 +458,18 @@ export default function Expenses() {
             <Text style={styles.label}>Receipt (optional)</Text>
             <Pressable style={styles.receiptBox} onPress={() => pickReceipt(setReceiptUri)}>
               {receiptUri ? (
-                <Image source={{ uri: receiptUri }} style={styles.receiptPreview} />
+                isPdf(receiptUri) ? (
+                  <View style={{ alignItems: 'center' }}>
+                    <Ionicons name="document-text" size={28} color="#EF4444" />
+                    <Text style={styles.receiptBoxText}>PDF attached</Text>
+                  </View>
+                ) : (
+                  <Image source={{ uri: receiptUri }} style={styles.receiptPreview} />
+                )
               ) : (
                 <>
                   <Ionicons name="camera-outline" size={22} color={colors.primary} />
-                  <Text style={styles.receiptBoxText}>Snap or upload a receipt</Text>
+                  <Text style={styles.receiptBoxText}>Snap or upload a receipt / PDF</Text>
                 </>
               )}
             </Pressable>
@@ -497,7 +519,14 @@ export default function Expenses() {
             <ScrollView keyboardShouldPersistTaps="handled">
               {reviewingExpense.receiptUri && (
                 <Pressable onPress={() => setViewer({ uri: reviewingExpense.receiptUri!, title: 'Receipt' })}>
-                  <Image source={{ uri: reviewingExpense.receiptUri }} style={styles.reviewImg} />
+                  {isPdf(reviewingExpense.receiptUri) ? (
+                    <View style={[styles.reviewImg, { alignItems: 'center', justifyContent: 'center', backgroundColor: colors.surfaceAlt }]}>
+                      <Ionicons name="document-text" size={36} color="#EF4444" />
+                      <Text style={{ color: colors.textMuted, fontSize: 12, marginTop: 6 }}>PDF receipt — tap to open</Text>
+                    </View>
+                  ) : (
+                    <Image source={{ uri: reviewingExpense.receiptUri }} style={styles.reviewImg} />
+                  )}
                 </Pressable>
               )}
               <Field label="Description" placeholder="e.g. Dinner at izakaya" value={rDesc} onChangeText={setRDesc} />

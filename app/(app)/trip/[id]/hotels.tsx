@@ -1,8 +1,8 @@
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView, Pressable, Modal, Image } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
-import * as ImagePicker from 'expo-image-picker';
 import { Ionicons } from '@expo/vector-icons';
+import { pickFile } from '../../../../src/lib/filePicker';
 import { useTrip } from '../../../../src/hooks/useTrips';
 import { useHotels, useBudgetCategories, useSaveHotel, useDeleteHotel, useAttachHotelProof } from '../../../../src/hooks/useTripData';
 import { Button, Field, EmptyState, Pill } from '../../../../src/components/ui';
@@ -15,6 +15,11 @@ import { confirmAction, notify } from '../../../../src/lib/confirm';
 import { openInMaps } from '../../../../src/lib/maps';
 import { ImageViewer } from '../../../../src/components/ImageViewer';
 import { Hotel } from '../../../../src/lib/types';
+
+function isPdf(uri?: string): boolean {
+  if (!uri) return false;
+  return /\.pdf($|\?)/i.test(uri) || uri.includes('application/pdf');
+}
 
 export default function Hotels() {
   const { colors } = useTheme();
@@ -61,8 +66,8 @@ export default function Hotels() {
   };
 
   const pickProof = async () => {
-    const res = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, quality: 0.6 });
-    if (!res.canceled) setProofUri(res.assets[0].uri);
+    const res = await pickFile();
+    if (res) setProofUri(res.uri);
   };
 
   const canSave = name.trim() && checkIn.trim() && checkOut.trim();
@@ -101,8 +106,8 @@ export default function Hotels() {
   };
 
   const uploadProof = async (h: Hotel) => {
-    const res = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, quality: 0.6 });
-    if (!res.canceled) attachProof.mutate({ hotel: h, uri: res.assets[0].uri });
+    const res = await pickFile();
+    if (res) attachProof.mutate({ hotel: h, uri: res.uri });
   };
 
   const displayTotal = (h: Hotel, n: number) =>
@@ -172,7 +177,14 @@ export default function Hotels() {
                 </View>
                 {h.proofUri && (
                   <Pressable onPress={() => setViewer({ uri: h.proofUri!, title: `${h.name} — booking proof` })}>
-                    <Image source={{ uri: h.proofUri }} style={styles.proofImg} />
+                    {isPdf(h.proofUri) ? (
+                      <View style={[styles.proofImg, { alignItems: 'center', justifyContent: 'center', backgroundColor: colors.surfaceAlt }]}>
+                        <Ionicons name="document-text" size={28} color="#EF4444" />
+                        <Text style={{ color: colors.textMuted, fontSize: 11, marginTop: 4 }}>PDF</Text>
+                      </View>
+                    ) : (
+                      <Image source={{ uri: h.proofUri }} style={styles.proofImg} />
+                    )}
                   </Pressable>
                 )}
               </View>
@@ -202,7 +214,14 @@ export default function Hotels() {
             <Text style={styles.uploadLabel}>Booking proof</Text>
             <Pressable style={styles.uploadBox} onPress={pickProof}>
               {proofUri ? (
-                <Image source={{ uri: proofUri }} style={styles.uploadPreview} />
+                isPdf(proofUri) ? (
+                  <View style={{ alignItems: 'center' }}>
+                    <Ionicons name="document-text" size={28} color="#EF4444" />
+                    <Text style={{ color: colors.textMuted, fontSize: 12, marginTop: 4 }}>PDF attached</Text>
+                  </View>
+                ) : (
+                  <Image source={{ uri: proofUri }} style={styles.uploadPreview} />
+                )
               ) : (
                 <>
                   <Ionicons name="cloud-upload-outline" size={24} color={colors.primary} />

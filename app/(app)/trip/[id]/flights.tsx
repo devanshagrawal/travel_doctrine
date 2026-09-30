@@ -1,8 +1,8 @@
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView, Pressable, Modal, Image } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
-import * as ImagePicker from 'expo-image-picker';
 import { Ionicons } from '@expo/vector-icons';
+import { pickFile } from '../../../../src/lib/filePicker';
 import dayjs from 'dayjs';
 import { useTrip } from '../../../../src/hooks/useTrips';
 import { useFlights, useBudgetCategories, useSaveFlight, useDeleteFlight, useAttachBoardingPass } from '../../../../src/hooks/useTripData';
@@ -15,6 +15,11 @@ import { formatMoney } from '../../../../src/lib/currency';
 import { confirmAction, notify } from '../../../../src/lib/confirm';
 import { ImageViewer } from '../../../../src/components/ImageViewer';
 import { Flight } from '../../../../src/lib/types';
+
+function isPdf(uri?: string): boolean {
+  if (!uri) return false;
+  return /\.pdf($|\?)/i.test(uri) || uri.includes('application/pdf');
+}
 
 export default function Flights() {
   const { colors } = useTheme();
@@ -72,8 +77,8 @@ export default function Flights() {
   };
 
   const pick = async (setter: (u: string) => void) => {
-    const res = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, quality: 0.6 });
-    if (!res.canceled) setter(res.assets[0].uri);
+    const res = await pickFile();
+    if (res) setter(res.uri);
   };
 
   const canSave = airline.trim() && from.trim() && to.trim() && date.trim();
@@ -115,8 +120,8 @@ export default function Flights() {
   };
 
   const uploadPass = async (f: Flight) => {
-    const res = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, quality: 0.6 });
-    if (!res.canceled) attachPass.mutate({ flight: f, uri: res.assets[0].uri });
+    const res = await pickFile();
+    if (res) attachPass.mutate({ flight: f, uri: res.uri });
   };
 
   const hasRoute = (f: Flight) => !!(f.fromCode && f.toCode);
@@ -196,14 +201,26 @@ export default function Flights() {
                 <View style={styles.proofRow}>
                   {f.bookingProofUri && (
                     <Pressable style={styles.proofThumbWrap} onPress={() => setViewer({ uri: f.bookingProofUri!, title: `${f.airline} — booking proof` })}>
-                      <Image source={{ uri: f.bookingProofUri }} style={styles.proofThumb} />
+                      {isPdf(f.bookingProofUri) ? (
+                        <View style={[styles.proofThumb, { alignItems: 'center', justifyContent: 'center', backgroundColor: colors.surfaceAlt }]}>
+                          <Ionicons name="document-text" size={20} color="#EF4444" />
+                        </View>
+                      ) : (
+                        <Image source={{ uri: f.bookingProofUri }} style={styles.proofThumb} />
+                      )}
                       <View style={styles.viewChip}><Ionicons name="expand-outline" size={11} color={colors.white} /><Text style={styles.viewChipText}>View</Text></View>
                       <Text style={styles.proofCap}>Booking</Text>
                     </Pressable>
                   )}
                   {f.boardingPassUri && (
                     <Pressable style={styles.proofThumbWrap} onPress={() => setViewer({ uri: f.boardingPassUri!, title: `${f.airline} — boarding pass` })}>
-                      <Image source={{ uri: f.boardingPassUri }} style={styles.proofThumb} />
+                      {isPdf(f.boardingPassUri) ? (
+                        <View style={[styles.proofThumb, { alignItems: 'center', justifyContent: 'center', backgroundColor: colors.surfaceAlt }]}>
+                          <Ionicons name="document-text" size={20} color="#EF4444" />
+                        </View>
+                      ) : (
+                        <Image source={{ uri: f.boardingPassUri }} style={styles.proofThumb} />
+                      )}
                       <View style={styles.viewChip}><Ionicons name="expand-outline" size={11} color={colors.white} /><Text style={styles.viewChipText}>View</Text></View>
                       <Text style={styles.proofCap}>Boarding pass</Text>
                     </Pressable>
@@ -264,7 +281,14 @@ function UploadTile({ label, hint, uri, onPress }: { label: string; hint?: strin
       <Text style={styles.uploadLabel}>{label}{hint ? ` · ${hint}` : ''}</Text>
       <Pressable style={styles.uploadBox} onPress={onPress}>
         {uri ? (
-          <Image source={{ uri }} style={styles.uploadPreview} />
+          isPdf(uri) ? (
+            <View style={{ alignItems: 'center' }}>
+              <Ionicons name="document-text" size={28} color="#EF4444" />
+              <Text style={styles.uploadText}>PDF attached</Text>
+            </View>
+          ) : (
+            <Image source={{ uri }} style={styles.uploadPreview} />
+          )
         ) : (
           <>
             <Ionicons name="cloud-upload-outline" size={22} color={colors.primary} />

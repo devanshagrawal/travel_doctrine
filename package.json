@@ -13,6 +13,7 @@
     "dayjs": "^1.11.21",
     "expo": "~57.0.12",
     "expo-constants": "~57.0.10",
+    "expo-document-picker": "~57.0.3",
     "expo-font": "~57.0.1",
     "expo-image-picker": "~57.0.9",
     "expo-linear-gradient": "~57.0.1",

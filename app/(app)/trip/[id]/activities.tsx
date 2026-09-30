@@ -1,8 +1,8 @@
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView, Pressable, Modal, Image } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
-import * as ImagePicker from 'expo-image-picker';
 import { Ionicons } from '@expo/vector-icons';
+import { pickFile } from '../../../../src/lib/filePicker';
 import { useTrip } from '../../../../src/hooks/useTrips';
 import { useActivities, useBudgetCategories, useSaveActivity, useDeleteActivity, useAttachTicket } from '../../../../src/hooks/useTripData';
 import { Button, Field, EmptyState, Pill } from '../../../../src/components/ui';
@@ -15,6 +15,11 @@ import { confirmAction, notify } from '../../../../src/lib/confirm';
 import { openInMaps } from '../../../../src/lib/maps';
 import { ImageViewer } from '../../../../src/components/ImageViewer';
 import { Activity } from '../../../../src/lib/types';
+
+function isPdf(uri?: string): boolean {
+  if (!uri) return false;
+  return /\.pdf($|\?)/i.test(uri) || uri.includes('application/pdf');
+}
 
 const ACTIVITY_CANDIDATES = ['activit', 'tour', 'experience', 'ticket', 'sightsee'];
 
@@ -65,8 +70,8 @@ export default function Activities() {
   };
 
   const pickProof = async () => {
-    const res = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, quality: 0.6 });
-    if (!res.canceled) setProofUri(res.assets[0].uri);
+    const res = await pickFile();
+    if (res) setProofUri(res.uri);
   };
 
   const canSave = name.trim() && date.trim();
@@ -106,8 +111,8 @@ export default function Activities() {
   };
 
   const uploadProof = async (a: Activity) => {
-    const res = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, quality: 0.6 });
-    if (!res.canceled) attachTicket.mutate({ activity: a, uri: res.assets[0].uri });
+    const res = await pickFile();
+    if (res) attachTicket.mutate({ activity: a, uri: res.uri });
   };
 
   return (
@@ -169,7 +174,14 @@ export default function Activities() {
               </View>
               {a.bookingProofUri && (
                 <Pressable onPress={() => setViewer({ uri: a.bookingProofUri!, title: `${a.name} — ticket` })}>
-                  <Image source={{ uri: a.bookingProofUri }} style={styles.proofImg} />
+                  {isPdf(a.bookingProofUri) ? (
+                    <View style={[styles.proofImg, { alignItems: 'center', justifyContent: 'center', backgroundColor: colors.surfaceAlt }]}>
+                      <Ionicons name="document-text" size={28} color="#EF4444" />
+                      <Text style={{ color: colors.textMuted, fontSize: 11, marginTop: 4 }}>PDF</Text>
+                    </View>
+                  ) : (
+                    <Image source={{ uri: a.bookingProofUri }} style={styles.proofImg} />
+                  )}
                 </Pressable>
               )}
             </View>
@@ -199,11 +211,18 @@ export default function Activities() {
             <Text style={styles.uploadLabel}>Ticket / confirmation</Text>
             <Pressable style={styles.uploadBox} onPress={pickProof}>
               {proofUri ? (
-                <Image source={{ uri: proofUri }} style={styles.uploadPreview} />
+                isPdf(proofUri) ? (
+                  <View style={{ alignItems: 'center' }}>
+                    <Ionicons name="document-text" size={28} color="#EF4444" />
+                    <Text style={styles.uploadText}>PDF attached</Text>
+                  </View>
+                ) : (
+                  <Image source={{ uri: proofUri }} style={styles.uploadPreview} />
+                )
               ) : (
                 <>
                   <Ionicons name="cloud-upload-outline" size={24} color={colors.primary} />
-                  <Text style={styles.uploadText}>Attach a photo or PDF screenshot</Text>
+                  <Text style={styles.uploadText}>Attach a photo or PDF</Text>
                 </>
               )}
             </Pressable>
