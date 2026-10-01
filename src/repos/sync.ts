@@ -71,6 +71,8 @@ export async function syncSourceItinerary(p: {
   title: string;
   type: ItineraryType;
   location?: string;
+  lat?: number;
+  lng?: number;
 }): Promise<void> {
   await supabase.from('itinerary_items').delete().eq('source_id', p.sourceId);
   const { error } = await supabase.from('itinerary_items').insert({
@@ -81,6 +83,8 @@ export async function syncSourceItinerary(p: {
     title: p.title,
     type: p.type,
     location: p.location ?? null,
+    lat: p.lat ?? null,
+    lng: p.lng ?? null,
     source_id: p.sourceId,
   });
   if (error) throw error;

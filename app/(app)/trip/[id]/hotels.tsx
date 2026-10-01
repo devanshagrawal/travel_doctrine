@@ -15,6 +15,7 @@ import { confirmAction, notify } from '../../../../src/lib/confirm';
 import { openInMaps } from '../../../../src/lib/maps';
 import { TimePickerField } from '../../../../src/components/TimePickerField';
 import { ImageViewer } from '../../../../src/components/ImageViewer';
+import { LocationField } from '../../../../src/components/LocationField';
 import { Hotel } from '../../../../src/lib/types';
 
 function isPdf(uri?: string): boolean {
@@ -44,14 +45,16 @@ export default function Hotels() {
   const [checkOutTime, setCheckOutTime] = React.useState('');
   const [proofUri, setProofUri] = React.useState<string | undefined>(undefined);
   const [platform, setPlatform] = React.useState('');
-  const [city, setCity] = React.useState('');
+  const [location, setLocation] = React.useState('');
+  const [lat, setLat] = React.useState<number | undefined>(undefined);
+  const [lng, setLng] = React.useState<number | undefined>(undefined);
 
   if (!trip) return null;
   const list = hotels.filter((h) => h.tripId === trip.id).sort((a, b) => (a.checkIn > b.checkIn ? 1 : -1));
 
   const close = () => {
     setAdding(false); setEditingId(null);
-    setName(''); setPrice(''); setCheckIn(''); setCheckOut(''); setCheckInTime(''); setCheckOutTime(''); setProofUri(undefined); setPlatform(''); setCity('');
+    setName(''); setPrice(''); setCheckIn(''); setCheckOut(''); setCheckInTime(''); setCheckOutTime(''); setProofUri(undefined); setPlatform(''); setLocation(''); setLat(undefined); setLng(undefined);
   };
 
   const openAdd = () => { close(); setAdding(true); };
@@ -66,7 +69,9 @@ export default function Hotels() {
     setCheckOutTime(h.checkOutTime || '');
     setProofUri(h.proofUri);
     setPlatform(h.platform || '');
-    setCity(h.city || '');
+    setLocation(h.location || '');
+    setLat(h.lat);
+    setLng(h.lng);
     setAdding(true);
   };
 
@@ -91,7 +96,9 @@ export default function Hotels() {
         price: Number(price) || 0,
         currency: trip.baseCurrency,
         platform: platform.trim() || undefined,
-        city: city.trim() || undefined,
+        location: location.trim() || undefined,
+        lat,
+        lng,
         categoryId: findCategoryId(categories, trip.id, ['hotel', 'stay', 'villa', 'accom', 'lodg']),
         proofUri,
       });
@@ -138,10 +145,10 @@ export default function Hotels() {
                   <View style={{ flex: 1 }}>
                     <Text style={styles.hotelName}>{h.name}</Text>
                     {h.address && <Text style={styles.hotelAddr} numberOfLines={1}>{h.address}</Text>}
-                    {!!h.city && <Text style={styles.hotelAddr} numberOfLines={1}>{h.city}</Text>}
+                    {!!h.location && <Text style={styles.hotelAddr} numberOfLines={1}>{h.location}</Text>}
                     {!!h.platform && <Text style={styles.hotelAddr} numberOfLines={1}>Booked via {h.platform}</Text>}
                   </View>
-                  <Pressable hitSlop={8} onPress={() => openInMaps(h.name, h.address, h.city)} style={styles.editBtn}>
+                  <Pressable hitSlop={8} onPress={() => openInMaps(h.name, h.address, h.location, h.lat, h.lng)} style={styles.editBtn}>
                     <Ionicons name="map-outline" size={17} color={colors.primary} />
                   </Pressable>
                   <Pressable hitSlop={8} onPress={() => openEdit(h)} style={styles.editBtn}>
@@ -212,7 +219,7 @@ export default function Hotels() {
           <Text style={styles.sheetHint}>Price and proof auto-fill your expenses, documents & itinerary.</Text>
           <ScrollView keyboardShouldPersistTaps="handled">
             <Field label="Hotel name" icon="bed-outline" placeholder="e.g. Shinjuku Granbell" value={name} onChangeText={setName} />
-            <Field label="City / area (optional)" icon="location-outline" placeholder="e.g. Lisbon" value={city} onChangeText={setCity} />
+            <LocationField label="Location (optional)" placeholder="Where?" value={location} onChangeText={(t) => { setLocation(t); setLat(undefined); setLng(undefined); }} onSelect={(r) => { setLocation(r.label); setLat(r.lat); setLng(r.lng); }} />
             <Field label={`Price (${trip.baseCurrency})`} icon="cash-outline" placeholder="Total for the stay" keyboardType="numeric" value={price} onChangeText={setPrice} />
             <View style={{ flexDirection: 'row', gap: spacing.md }}>
               <View style={{ flex: 1 }}><Field label="Check-in *" placeholder="YYYY-MM-DD" value={checkIn} onChangeText={setCheckIn} autoCapitalize="none" /></View>

@@ -15,6 +15,7 @@ import { confirmAction, notify } from '../../../../src/lib/confirm';
 import { TimePickerField } from '../../../../src/components/TimePickerField';
 import { openInMaps } from '../../../../src/lib/maps';
 import { ImageViewer } from '../../../../src/components/ImageViewer';
+import { LocationField } from '../../../../src/components/LocationField';
 import { Activity } from '../../../../src/lib/types';
 
 function isPdf(uri?: string): boolean {
@@ -43,6 +44,8 @@ export default function Activities() {
   const [time, setTime] = React.useState('');
   const [endTime, setEndTime] = React.useState('');
   const [location, setLocation] = React.useState('');
+  const [lat, setLat] = React.useState<number | undefined>(undefined);
+  const [lng, setLng] = React.useState<number | undefined>(undefined);
   const [price, setPrice] = React.useState('');
   const [platform, setPlatform] = React.useState('');
   const [proofUri, setProofUri] = React.useState<string | undefined>(undefined);
@@ -52,7 +55,7 @@ export default function Activities() {
 
   const close = () => {
     setAdding(false); setEditingId(null);
-    setName(''); setDate(''); setTime(''); setEndTime(''); setLocation(''); setPrice(''); setPlatform(''); setProofUri(undefined);
+    setName(''); setDate(''); setTime(''); setEndTime(''); setLocation(''); setLat(undefined); setLng(undefined); setPrice(''); setPlatform(''); setProofUri(undefined);
   };
 
   const openAdd = () => { close(); setDate(trip.startDate); setAdding(true); };
@@ -64,6 +67,8 @@ export default function Activities() {
     setTime(a.time || '');
     setEndTime(a.endTime || '');
     setLocation(a.location || '');
+    setLat(a.lat);
+    setLng(a.lng);
     setPrice(a.price != null ? String(a.price) : '');
     setPlatform(a.platform || '');
     setProofUri(a.bookingProofUri);
@@ -88,6 +93,8 @@ export default function Activities() {
         time: time.trim() || undefined,
         endTime: endTime.trim() || undefined,
         location: location.trim() || undefined,
+        lat,
+        lng,
         price: Number(price) || 0,
         currency: trip.baseCurrency,
         platform: platform.trim() || undefined,
@@ -133,7 +140,7 @@ export default function Activities() {
                   {!!a.platform && <Text style={styles.sub} numberOfLines={1}>Booked via {a.platform}</Text>}
                 </View>
                 {!!a.location && (
-                  <Pressable hitSlop={8} onPress={() => openInMaps(a.name, a.location)} style={styles.editBtn}>
+                  <Pressable hitSlop={8} onPress={() => openInMaps(a.name, a.location, undefined, a.lat, a.lng)} style={styles.editBtn}>
                     <Ionicons name="map-outline" size={17} color={colors.primary} />
                   </Pressable>
                 )}
@@ -205,7 +212,7 @@ export default function Activities() {
               <View style={{ flex: 1 }}><TimePickerField label="Start time (optional)" value={time} onChange={setTime} /></View>
               <View style={{ flex: 1 }}><TimePickerField label="End time (optional)" value={endTime} onChange={setEndTime} /></View>
             </View>
-            <Field label="Location (optional)" icon="location-outline" placeholder="Where?" value={location} onChangeText={setLocation} />
+            <LocationField label="Location (optional)" placeholder="Where?" value={location} onChangeText={(t) => { setLocation(t); setLat(undefined); setLng(undefined); }} onSelect={(r) => { setLocation(r.label); setLat(r.lat); setLng(r.lng); }} />
             <Field label={`Price (${trip.baseCurrency})`} icon="cash-outline" placeholder="0" keyboardType="numeric" value={price} onChangeText={setPrice} />
             <Field label="Booked via (optional)" icon="globe-outline" placeholder="e.g. GetYourGuide, direct" value={platform} onChangeText={setPlatform} autoCapitalize="none" />
 

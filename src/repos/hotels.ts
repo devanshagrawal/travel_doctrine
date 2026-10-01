@@ -15,8 +15,10 @@ interface HotelRow {
   currency: string | null;
   platform: string | null;
   proof_uri: string | null;
-  city: string | null;
+  location: string | null;
   address: string | null;
+  lat: number | null;
+  lng: number | null;
   confirmation_no: string | null;
   price_per_night: number | null;
 }
@@ -34,8 +36,10 @@ function rowToHotel(r: HotelRow): Hotel {
     currency: r.currency ?? undefined,
     platform: r.platform ?? undefined,
     proofUri: r.proof_uri ?? undefined,
-    city: r.city ?? undefined,
+    location: r.location ?? undefined,
     address: r.address ?? undefined,
+    lat: r.lat ?? undefined,
+    lng: r.lng ?? undefined,
     confirmationNo: r.confirmation_no ?? undefined,
     pricePerNight: r.price_per_night ?? undefined,
   };
@@ -58,7 +62,9 @@ export interface SaveHotelInput {
   price: number; // 0 = no price
   currency: string;
   platform?: string;
-  city?: string;
+  location?: string;
+  lat?: number;
+  lng?: number;
   categoryId: string | null;
   proofUri?: string;
 }
@@ -74,7 +80,9 @@ export async function saveHotel(a: SaveHotelInput): Promise<void> {
     total_price: a.price || null,
     currency: a.currency,
     platform: a.platform ?? null,
-    city: a.city ?? null,
+    location: a.location ?? null,
+    lat: a.lat ?? null,
+    lng: a.lng ?? null,
     proof_uri: proofUri ?? null,
   };
 
@@ -107,8 +115,8 @@ export async function saveHotel(a: SaveHotelInput): Promise<void> {
   // Two itinerary entries: check-in and check-out
   await supabase.from('itinerary_items').delete().eq('source_id', hotelId);
   const entries = [
-    { trip_id: a.tripId, day_date: a.checkIn, time: a.checkInTime || '15:00', title: `Check in – ${a.name}`, type: 'stay' as const, location: a.name, source_id: hotelId },
-    { trip_id: a.tripId, day_date: a.checkOut, time: a.checkOutTime || '11:00', title: `Check out – ${a.name}`, type: 'stay' as const, location: a.name, source_id: hotelId },
+    { trip_id: a.tripId, day_date: a.checkIn, time: a.checkInTime || '15:00', title: `Check in – ${a.name}`, type: 'stay' as const, location: a.location ?? a.name, lat: a.lat ?? null, lng: a.lng ?? null, source_id: hotelId },
+    { trip_id: a.tripId, day_date: a.checkOut, time: a.checkOutTime || '11:00', title: `Check out – ${a.name}`, type: 'stay' as const, location: a.location ?? a.name, lat: a.lat ?? null, lng: a.lng ?? null, source_id: hotelId },
   ];
   const { error: itErr } = await supabase.from('itinerary_items').insert(entries);
   if (itErr) throw itErr;

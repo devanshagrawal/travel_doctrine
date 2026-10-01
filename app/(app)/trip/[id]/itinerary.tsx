@@ -13,6 +13,7 @@ import { daysBetween, fmtDate } from '../../../../src/lib/format';
 import { openInMaps } from '../../../../src/lib/maps';
 import { ItineraryType } from '../../../../src/lib/types';
 import { TimePickerField } from '../../../../src/components/TimePickerField';
+import { LocationField } from '../../../../src/components/LocationField';
 
 const TYPE_META: Record<ItineraryType, { icon: any; color: string; label: string }> = {
   activity: { icon: 'walk', color: '#2563EB', label: 'Activity' },
@@ -39,14 +40,16 @@ export default function Itinerary() {
   const [time, setTime] = React.useState('');
   const [title, setTitle] = React.useState('');
   const [location, setLocation] = React.useState('');
+  const [lat, setLat] = React.useState<number | undefined>(undefined);
+  const [lng, setLng] = React.useState<number | undefined>(undefined);
   const [type, setType] = React.useState<ItineraryType>('activity');
 
   if (!trip) return null;
   const days = daysBetween(trip.startDate, trip.endDate);
   const items = itinerary.filter((i) => i.tripId === trip.id);
 
-  const openAdd = (d?: string) => { setEditingId(null); setDayDate(d || days[0]); setTime(''); setTitle(''); setLocation(''); setType('activity'); setAdding(true); };
-  const openEdit = (it: typeof items[0]) => { setEditingId(it.id); setDayDate(it.dayDate); setTime(it.time || ''); setTitle(it.title); setLocation(it.location || ''); setType(it.type); setAdding(true); };
+  const openAdd = (d?: string) => { setEditingId(null); setDayDate(d || days[0]); setTime(''); setTitle(''); setLocation(''); setLat(undefined); setLng(undefined); setType('activity'); setAdding(true); };
+  const openEdit = (it: typeof items[0]) => { setEditingId(it.id); setDayDate(it.dayDate); setTime(it.time || ''); setTitle(it.title); setLocation(it.location || ''); setLat(it.lat); setLng(it.lng); setType(it.type); setAdding(true); };
   const close = () => { setAdding(false); setEditingId(null); };
 
   const isSaving = addItem.isPending || updateItem.isPending;
@@ -54,9 +57,9 @@ export default function Itinerary() {
     if (!title.trim() || !dayDate || isSaving) return;
     try {
       if (editingId) {
-        await updateItem.mutateAsync({ id: editingId, dayDate, time: time.trim() || undefined, title: title.trim(), location: location.trim() || undefined, type });
+        await updateItem.mutateAsync({ id: editingId, dayDate, time: time.trim() || undefined, title: title.trim(), location: location.trim() || undefined, lat, lng, type });
       } else {
-        await addItem.mutateAsync({ tripId: trip.id, dayDate, time: time.trim() || undefined, title: title.trim(), location: location.trim() || undefined, type });
+        await addItem.mutateAsync({ tripId: trip.id, dayDate, time: time.trim() || undefined, title: title.trim(), location: location.trim() || undefined, lat, lng, type });
       }
       close();
     } catch (e: any) {
@@ -120,7 +123,7 @@ export default function Itinerary() {
                             <Ionicons name={meta.icon} size={15} color={meta.color} />
                             <Text style={styles.itemTitle}>{it.title}</Text>
                             {!!it.location && (
-                              <Pressable hitSlop={8} onPress={() => openInMaps(it.title, it.location)}>
+                              <Pressable hitSlop={8} onPress={() => openInMaps(it.title, it.location, undefined, it.lat, it.lng)}>
                                 <Ionicons name="map-outline" size={16} color={colors.primary} />
                               </Pressable>
                             )}
@@ -178,7 +181,7 @@ export default function Itinerary() {
                 <TimePickerField label="Time (optional)" value={time} onChange={setTime} />
               </View>
             </View>
-            <Field label="Location (optional)" icon="location-outline" placeholder="Where?" value={location} onChangeText={setLocation} />
+            <LocationField label="Location (optional)" placeholder="Where?" value={location} onChangeText={(t) => { setLocation(t); setLat(undefined); setLng(undefined); }} onSelect={(r) => { setLocation(r.label); setLat(r.lat); setLng(r.lng); }} />
             <Button label={isSaving ? 'Saving…' : editingId ? 'Save changes' : 'Add to day'} onPress={save} disabled={!title.trim() || !dayDate || isSaving} full style={{ marginTop: spacing.sm }} />
             {editingId && (
               <Button label="Delete item" icon="trash-outline" variant="danger" onPress={askDelete} full style={{ marginTop: spacing.sm, marginBottom: spacing.xl }} />

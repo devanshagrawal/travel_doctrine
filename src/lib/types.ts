@@ -23,6 +23,8 @@ export interface ItineraryItem {
   title: string;
   type: ItineraryType;
   location?: string;
+  lat?: number;
+  lng?: number;
   notes?: string;
   sourceId?: string; // if auto-created from a flight/hotel, that record's id
 }
@@ -132,8 +134,10 @@ export interface Hotel {
   currency?: CurrencyCode;
   platform?: string; // where it was booked (e.g. Booking.com, direct)
   proofUri?: string;
-  city?: string; // for the map search (e.g. "Lisbon")
+  location?: string;
   address?: string;
+  lat?: number;
+  lng?: number;
   confirmationNo?: string;
   pricePerNight?: number;
 }
@@ -149,6 +153,8 @@ export interface Activity {
   time?: string; // start time 'HH:mm'
   endTime?: string; // end time 'HH:mm'
   location?: string;
+  lat?: number;
+  lng?: number;
   price?: number; // in `currency`
   currency?: CurrencyCode;
   platform?: string; // where it was booked (e.g. GetYourGuide, direct)

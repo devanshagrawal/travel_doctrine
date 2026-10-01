@@ -10,6 +10,8 @@ interface ItineraryRow {
   title: string;
   type: ItineraryType;
   location: string | null;
+  lat: number | null;
+  lng: number | null;
   notes: string | null;
   source_id: string | null;
 }
@@ -24,6 +26,8 @@ function rowToItem(r: ItineraryRow): ItineraryItem {
     title: r.title,
     type: r.type,
     location: r.location ?? undefined,
+    lat: r.lat ?? undefined,
+    lng: r.lng ?? undefined,
     notes: r.notes ?? undefined,
     sourceId: r.source_id ?? undefined,
   };
@@ -47,6 +51,8 @@ export async function addItineraryItem(input: Omit<ItineraryItem, 'id'>): Promis
     title: input.title,
     type: input.type,
     location: input.location ?? null,
+    lat: input.lat ?? null,
+    lng: input.lng ?? null,
     notes: input.notes ?? null,
     source_id: input.sourceId ?? null,
   });
@@ -61,6 +67,8 @@ export async function updateItineraryItem(id: string, input: Partial<Omit<Itiner
   if (input.title !== undefined) fields.title = input.title;
   if (input.type !== undefined) fields.type = input.type;
   if (input.location !== undefined) fields.location = input.location || null;
+  if (input.lat !== undefined) fields.lat = input.lat ?? null;
+  if (input.lng !== undefined) fields.lng = input.lng ?? null;
   if (input.notes !== undefined) fields.notes = input.notes || null;
   const { error } = await supabase.from('itinerary_items').update(fields).eq('id', id);
   if (error) throw error;
