@@ -13,6 +13,7 @@ import { formatMoney } from '../../../../src/lib/currency';
 import { findCategoryId } from '../../../../src/lib/selectors';
 import { confirmAction, notify } from '../../../../src/lib/confirm';
 import { openInMaps } from '../../../../src/lib/maps';
+import { TimePickerField } from '../../../../src/components/TimePickerField';
 import { ImageViewer } from '../../../../src/components/ImageViewer';
 import { Hotel } from '../../../../src/lib/types';
 
@@ -39,6 +40,8 @@ export default function Hotels() {
   const [price, setPrice] = React.useState('');
   const [checkIn, setCheckIn] = React.useState('');
   const [checkOut, setCheckOut] = React.useState('');
+  const [checkInTime, setCheckInTime] = React.useState('');
+  const [checkOutTime, setCheckOutTime] = React.useState('');
   const [proofUri, setProofUri] = React.useState<string | undefined>(undefined);
   const [platform, setPlatform] = React.useState('');
   const [city, setCity] = React.useState('');
@@ -48,7 +51,7 @@ export default function Hotels() {
 
   const close = () => {
     setAdding(false); setEditingId(null);
-    setName(''); setPrice(''); setCheckIn(''); setCheckOut(''); setProofUri(undefined); setPlatform(''); setCity('');
+    setName(''); setPrice(''); setCheckIn(''); setCheckOut(''); setCheckInTime(''); setCheckOutTime(''); setProofUri(undefined); setPlatform(''); setCity('');
   };
 
   const openAdd = () => { close(); setAdding(true); };
@@ -59,6 +62,8 @@ export default function Hotels() {
     setPrice(h.totalPrice != null ? String(h.totalPrice) : '');
     setCheckIn(h.checkIn);
     setCheckOut(h.checkOut);
+    setCheckInTime(h.checkInTime || '');
+    setCheckOutTime(h.checkOutTime || '');
     setProofUri(h.proofUri);
     setPlatform(h.platform || '');
     setCity(h.city || '');
@@ -81,6 +86,8 @@ export default function Hotels() {
         name: name.trim(),
         checkIn: checkIn.trim(),
         checkOut: checkOut.trim(),
+        checkInTime: checkInTime.trim() || undefined,
+        checkOutTime: checkOutTime.trim() || undefined,
         price: Number(price) || 0,
         currency: trip.baseCurrency,
         platform: platform.trim() || undefined,
@@ -146,6 +153,7 @@ export default function Hotels() {
                   <View style={styles.dateBox}>
                     <Text style={styles.dateLabel}>Check-in</Text>
                     <Text style={styles.dateValue}>{fmtDate(h.checkIn, 'MMM D')}</Text>
+                    {!!h.checkInTime && <Text style={styles.dateTime}>{h.checkInTime}</Text>}
                   </View>
                   <View style={styles.nightsPill}>
                     <Text style={styles.nightsText}>{n} night{n === 1 ? '' : 's'}</Text>
@@ -153,6 +161,7 @@ export default function Hotels() {
                   <View style={[styles.dateBox, { alignItems: 'flex-end' }]}>
                     <Text style={styles.dateLabel}>Check-out</Text>
                     <Text style={styles.dateValue}>{fmtDate(h.checkOut, 'MMM D')}</Text>
+                    {!!h.checkOutTime && <Text style={styles.dateTime}>{h.checkOutTime}</Text>}
                   </View>
                 </View>
 
@@ -209,6 +218,10 @@ export default function Hotels() {
               <View style={{ flex: 1 }}><Field label="Check-in *" placeholder="YYYY-MM-DD" value={checkIn} onChangeText={setCheckIn} autoCapitalize="none" /></View>
               <View style={{ flex: 1 }}><Field label="Check-out *" placeholder="YYYY-MM-DD" value={checkOut} onChangeText={setCheckOut} autoCapitalize="none" /></View>
             </View>
+            <View style={{ flexDirection: 'row', gap: spacing.md }}>
+              <View style={{ flex: 1 }}><TimePickerField label="Check-in time (optional)" value={checkInTime} onChange={setCheckInTime} /></View>
+              <View style={{ flex: 1 }}><TimePickerField label="Check-out time (optional)" value={checkOutTime} onChange={setCheckOutTime} /></View>
+            </View>
             <Field label="Booked via (optional)" icon="globe-outline" placeholder="e.g. Booking.com, direct" value={platform} onChangeText={setPlatform} autoCapitalize="none" />
 
             <Text style={styles.uploadLabel}>Booking proof</Text>
@@ -257,6 +270,7 @@ const makeStyles = (colors: Palette) => StyleSheet.create({
   dateBox: { flex: 1 },
   dateLabel: { fontSize: font.size.xs, color: colors.textMuted },
   dateValue: { fontSize: font.size.md, fontWeight: font.weight.bold, color: colors.text, marginTop: 2 },
+  dateTime: { fontSize: font.size.xs, color: colors.textMuted, marginTop: 1 },
   nightsPill: { backgroundColor: colors.surface, paddingHorizontal: 12, paddingVertical: 5, borderRadius: radius.pill, borderWidth: 1, borderColor: colors.border },
   nightsText: { fontSize: font.size.xs, fontWeight: font.weight.semibold, color: colors.textMuted },
   metaRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: spacing.md },

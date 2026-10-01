@@ -12,6 +12,7 @@ import { useTheme } from '../../../../src/theme/useTheme';
 import { daysBetween, fmtDate } from '../../../../src/lib/format';
 import { openInMaps } from '../../../../src/lib/maps';
 import { ItineraryType } from '../../../../src/lib/types';
+import { TimePickerField } from '../../../../src/components/TimePickerField';
 
 const TYPE_META: Record<ItineraryType, { icon: any; color: string; label: string }> = {
   activity: { icon: 'walk', color: '#2563EB', label: 'Activity' },
@@ -152,7 +153,7 @@ export default function Itinerary() {
                 <Field label="Day" placeholder="YYYY-MM-DD" value={dayDate} onChangeText={setDayDate} autoCapitalize="none" />
               </View>
               <View style={{ flex: 1 }}>
-                <Field label="Time (optional)" placeholder="HH:mm" value={time} onChangeText={setTime} autoCapitalize="none" />
+                <TimePickerField label="Time (optional)" value={time} onChange={setTime} />
               </View>
             </View>
             <Field label="Location (optional)" icon="location-outline" placeholder="Where?" value={location} onChangeText={setLocation} />

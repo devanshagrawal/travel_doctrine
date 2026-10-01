@@ -126,12 +126,13 @@ export interface Hotel {
   name: string;
   checkIn: string; // ISO date
   checkOut: string; // ISO date
+  checkInTime?: string; // HH:mm
+  checkOutTime?: string; // HH:mm
   totalPrice?: number; // in `currency`
   currency?: CurrencyCode;
   platform?: string; // where it was booked (e.g. Booking.com, direct)
   proofUri?: string;
   city?: string; // for the map search (e.g. "Lisbon")
-  // Optional extras (kept for seed data; the quick-add form omits them).
   address?: string;
   confirmationNo?: string;
   pricePerNight?: number;

@@ -13,6 +13,7 @@ import { fmtDateUtc, fmtTime } from '../../../../src/lib/format';
 import { findCategoryId } from '../../../../src/lib/selectors';
 import { formatMoney } from '../../../../src/lib/currency';
 import { confirmAction, notify } from '../../../../src/lib/confirm';
+import { TimePickerField } from '../../../../src/components/TimePickerField';
 import { ImageViewer } from '../../../../src/components/ImageViewer';
 import { Flight } from '../../../../src/lib/types';
 
@@ -249,8 +250,8 @@ export default function Flights() {
             <Field label={`Price (${trip.baseCurrency})`} icon="cash-outline" placeholder="0" keyboardType="numeric" value={price} onChangeText={setPrice} />
             <Field label="Date *" icon="calendar-outline" placeholder="YYYY-MM-DD" value={date} onChangeText={setDate} autoCapitalize="none" />
             <View style={{ flexDirection: 'row', gap: spacing.md }}>
-              <View style={{ flex: 1 }}><Field label="Departure time" placeholder="HH:mm" value={time} onChangeText={setTime} autoCapitalize="none" /></View>
-              <View style={{ flex: 1 }}><Field label="Arrival time" placeholder="HH:mm" value={arrTime} onChangeText={setArrTime} autoCapitalize="none" /></View>
+              <View style={{ flex: 1 }}><TimePickerField label="Departure time" value={time} onChange={setTime} /></View>
+              <View style={{ flex: 1 }}><TimePickerField label="Arrival time" value={arrTime} onChange={setArrTime} /></View>
             </View>
             <Field label="Booked via (optional)" icon="globe-outline" placeholder="e.g. MakeMyTrip, direct" value={platform} onChangeText={setPlatform} autoCapitalize="none" />
 

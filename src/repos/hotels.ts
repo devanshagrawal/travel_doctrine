@@ -1,7 +1,7 @@
 import { supabase } from '../lib/supabase';
 import { ensureRemote } from '../lib/storage';
 import { Hotel } from '../lib/types';
-import { syncSourceExpense, syncSourceDocument, syncSourceItinerary } from './sync';
+import { syncSourceExpense, syncSourceDocument } from './sync';
 
 interface HotelRow {
   id: string;
@@ -9,6 +9,8 @@ interface HotelRow {
   name: string;
   check_in: string;
   check_out: string;
+  check_in_time: string | null;
+  check_out_time: string | null;
   total_price: number | null;
   currency: string | null;
   platform: string | null;
@@ -26,6 +28,8 @@ function rowToHotel(r: HotelRow): Hotel {
     name: r.name,
     checkIn: r.check_in,
     checkOut: r.check_out,
+    checkInTime: r.check_in_time ?? undefined,
+    checkOutTime: r.check_out_time ?? undefined,
     totalPrice: r.total_price ?? undefined,
     currency: r.currency ?? undefined,
     platform: r.platform ?? undefined,
@@ -49,6 +53,8 @@ export interface SaveHotelInput {
   name: string;
   checkIn: string;
   checkOut: string;
+  checkInTime?: string;
+  checkOutTime?: string;
   price: number; // 0 = no price
   currency: string;
   platform?: string;
@@ -63,6 +69,8 @@ export async function saveHotel(a: SaveHotelInput): Promise<void> {
     name: a.name,
     check_in: a.checkIn,
     check_out: a.checkOut,
+    check_in_time: a.checkInTime ?? null,
+    check_out_time: a.checkOutTime ?? null,
     total_price: a.price || null,
     currency: a.currency,
     platform: a.platform ?? null,
@@ -95,7 +103,15 @@ export async function saveHotel(a: SaveHotelInput): Promise<void> {
     paidBy: 'Me',
   });
   await syncSourceDocument({ sourceId: hotelId, sourceTag: 'booking', tripId: a.tripId, type: 'other', title: `Hotel – ${a.name} booking`, fileUri: proofUri });
-  await syncSourceItinerary({ sourceId: hotelId, tripId: a.tripId, dayDate: a.checkIn, time: '15:00', title: `Check in – ${a.name}`, type: 'stay', location: a.name });
+
+  // Two itinerary entries: check-in and check-out
+  await supabase.from('itinerary_items').delete().eq('source_id', hotelId);
+  const entries = [
+    { trip_id: a.tripId, day_date: a.checkIn, time: a.checkInTime || '15:00', title: `Check in – ${a.name}`, type: 'stay' as const, location: a.name, source_id: hotelId },
+    { trip_id: a.tripId, day_date: a.checkOut, time: a.checkOutTime || '11:00', title: `Check out – ${a.name}`, type: 'stay' as const, location: a.name, source_id: hotelId },
+  ];
+  const { error: itErr } = await supabase.from('itinerary_items').insert(entries);
+  if (itErr) throw itErr;
 }
 
 export async function attachHotelProof(hotel: Hotel, uri: string): Promise<void> {

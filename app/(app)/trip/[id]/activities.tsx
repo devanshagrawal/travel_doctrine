@@ -12,6 +12,7 @@ import { fmtDate } from '../../../../src/lib/format';
 import { formatMoney } from '../../../../src/lib/currency';
 import { findCategoryId } from '../../../../src/lib/selectors';
 import { confirmAction, notify } from '../../../../src/lib/confirm';
+import { TimePickerField } from '../../../../src/components/TimePickerField';
 import { openInMaps } from '../../../../src/lib/maps';
 import { ImageViewer } from '../../../../src/components/ImageViewer';
 import { Activity } from '../../../../src/lib/types';
@@ -201,8 +202,8 @@ export default function Activities() {
             <Field label="Activity" icon="sparkles-outline" placeholder="e.g. Sintra & Cascais day tour" value={name} onChangeText={setName} />
             <Field label="Date *" icon="calendar-outline" placeholder="YYYY-MM-DD" value={date} onChangeText={setDate} autoCapitalize="none" />
             <View style={{ flexDirection: 'row', gap: spacing.md }}>
-              <View style={{ flex: 1 }}><Field label="Start time (optional)" placeholder="HH:mm" value={time} onChangeText={setTime} autoCapitalize="none" /></View>
-              <View style={{ flex: 1 }}><Field label="End time (optional)" placeholder="HH:mm" value={endTime} onChangeText={setEndTime} autoCapitalize="none" /></View>
+              <View style={{ flex: 1 }}><TimePickerField label="Start time (optional)" value={time} onChange={setTime} /></View>
+              <View style={{ flex: 1 }}><TimePickerField label="End time (optional)" value={endTime} onChange={setEndTime} /></View>
             </View>
             <Field label="Location (optional)" icon="location-outline" placeholder="Where?" value={location} onChangeText={setLocation} />
             <Field label={`Price (${trip.baseCurrency})`} icon="cash-outline" placeholder="0" keyboardType="numeric" value={price} onChangeText={setPrice} />
