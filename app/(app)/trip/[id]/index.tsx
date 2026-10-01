@@ -68,6 +68,7 @@ export default function TripOverview() {
 
   const sections = [
     { key: 'itinerary', title: 'Itinerary', icon: 'map', color: '#2563EB', sub: `${counts.itinerary} items`, href: `/(app)/trip/${trip.id}/itinerary` },
+    { key: 'map', title: 'Map', icon: 'navigate', color: '#10B981', sub: 'View all pins', href: `/(app)/trip/${trip.id}/map` },
     { key: 'budget', title: 'Budget', icon: 'pie-chart', color: '#F97316', sub: `${Math.round(summary.pct * 100)}% used`, href: `/(app)/trip/${trip.id}/budget` },
     { key: 'expenses', title: 'Expenses', icon: 'receipt', color: '#16A34A', sub: `${expenses.filter((e) => e.tripId === trip.id).length} logged`, href: `/(app)/trip/${trip.id}/expenses` },
     { key: 'documents', title: 'Documents', icon: 'document-text', color: '#9333EA', sub: `${counts.documents} files`, href: `/(app)/trip/${trip.id}/documents` },
