@@ -5,7 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import dayjs from 'dayjs';
 import { confirmAction, notify } from '../../../../src/lib/confirm';
 import { useTrip } from '../../../../src/hooks/useTrips';
-import { useItinerary, useAddItineraryItem, useDeleteItineraryItem } from '../../../../src/hooks/useTripData';
+import { useItinerary, useAddItineraryItem, useUpdateItineraryItem, useDeleteItineraryItem } from '../../../../src/hooks/useTripData';
 import { Button, Field, EmptyState } from '../../../../src/components/ui';
 import { font, radius, shadow, spacing, Palette } from '../../../../src/theme';
 import { useTheme } from '../../../../src/theme/useTheme';
@@ -30,9 +30,11 @@ export default function Itinerary() {
   const { data: trip } = useTrip(id);
   const { data: itinerary = [] } = useItinerary(id);
   const addItem = useAddItineraryItem(id);
+  const updateItem = useUpdateItineraryItem(id);
   const deleteItem = useDeleteItineraryItem(id);
 
   const [adding, setAdding] = React.useState(false);
+  const [editingId, setEditingId] = React.useState<string | null>(null);
   const [dayDate, setDayDate] = React.useState('');
   const [time, setTime] = React.useState('');
   const [title, setTitle] = React.useState('');
@@ -43,15 +45,29 @@ export default function Itinerary() {
   const days = daysBetween(trip.startDate, trip.endDate);
   const items = itinerary.filter((i) => i.tripId === trip.id);
 
-  const openAdd = (d?: string) => { setDayDate(d || days[0]); setTime(''); setTitle(''); setLocation(''); setType('activity'); setAdding(true); };
+  const openAdd = (d?: string) => { setEditingId(null); setDayDate(d || days[0]); setTime(''); setTitle(''); setLocation(''); setType('activity'); setAdding(true); };
+  const openEdit = (it: typeof items[0]) => { setEditingId(it.id); setDayDate(it.dayDate); setTime(it.time || ''); setTitle(it.title); setLocation(it.location || ''); setType(it.type); setAdding(true); };
+  const close = () => { setAdding(false); setEditingId(null); };
+
+  const isSaving = addItem.isPending || updateItem.isPending;
   const save = async () => {
-    if (!title.trim() || !dayDate || addItem.isPending) return;
+    if (!title.trim() || !dayDate || isSaving) return;
     try {
-      await addItem.mutateAsync({ tripId: trip.id, dayDate, time: time.trim() || undefined, title: title.trim(), location: location.trim() || undefined, type });
-      setAdding(false);
+      if (editingId) {
+        await updateItem.mutateAsync({ id: editingId, dayDate, time: time.trim() || undefined, title: title.trim(), location: location.trim() || undefined, type });
+      } else {
+        await addItem.mutateAsync({ tripId: trip.id, dayDate, time: time.trim() || undefined, title: title.trim(), location: location.trim() || undefined, type });
+      }
+      close();
     } catch (e: any) {
-      notify('Could not add item', e?.message ?? 'Please try again.');
+      notify(editingId ? 'Could not update item' : 'Could not add item', e?.message ?? 'Please try again.');
     }
+  };
+  const askDelete = () => {
+    if (!editingId) return;
+    const eid = editingId;
+    close();
+    confirmAction('Delete item', `Remove "${title}"?`, () => deleteItem.mutate(eid));
   };
   const confirmDelete = (iid: string, label: string) =>
     confirmAction('Delete item', `Remove "${label}"?`, () => deleteItem.mutate(iid));
@@ -89,8 +105,9 @@ export default function Itinerary() {
                 ) : (
                   dayItems.map((it) => {
                     const meta = TYPE_META[it.type];
+                    const isManual = !it.sourceId;
                     return (
-                      <Pressable key={it.id} style={styles.timelineRow} onLongPress={() => confirmDelete(it.id, it.title)}>
+                      <Pressable key={it.id} style={styles.timelineRow} onLongPress={() => isManual && confirmDelete(it.id, it.title)}>
                         <View style={styles.timeCol}>
                           <Text style={styles.timeText}>{it.time || '—'}</Text>
                           {!!it.endTime && <Text style={styles.timeEnd}>–{it.endTime}</Text>}
@@ -105,6 +122,11 @@ export default function Itinerary() {
                             {!!it.location && (
                               <Pressable hitSlop={8} onPress={() => openInMaps(it.title, it.location)}>
                                 <Ionicons name="map-outline" size={16} color={colors.primary} />
+                              </Pressable>
+                            )}
+                            {isManual && (
+                              <Pressable hitSlop={8} onPress={() => openEdit(it)}>
+                                <Ionicons name="create-outline" size={16} color={colors.textMuted} />
                               </Pressable>
                             )}
                           </View>
@@ -132,11 +154,11 @@ export default function Itinerary() {
         </Pressable>
       )}
 
-      <Modal visible={adding} animationType="slide" transparent onRequestClose={() => setAdding(false)}>
-        <Pressable style={styles.backdrop} onPress={() => setAdding(false)} />
+      <Modal visible={adding} animationType="slide" transparent onRequestClose={close}>
+        <Pressable style={styles.backdrop} onPress={close} />
         <View style={styles.sheet}>
           <View style={styles.handle} />
-          <Text style={styles.sheetTitle}>Add to itinerary</Text>
+          <Text style={styles.sheetTitle}>{editingId ? 'Edit item' : 'Add to itinerary'}</Text>
           <ScrollView keyboardShouldPersistTaps="handled">
             <Text style={styles.label}>Type</Text>
             <View style={styles.typeRow}>
@@ -157,7 +179,11 @@ export default function Itinerary() {
               </View>
             </View>
             <Field label="Location (optional)" icon="location-outline" placeholder="Where?" value={location} onChangeText={setLocation} />
-            <Button label={addItem.isPending ? 'Adding…' : 'Add to day'} onPress={save} disabled={!title.trim() || !dayDate || addItem.isPending} full style={{ marginTop: spacing.sm, marginBottom: spacing.xl }} />
+            <Button label={isSaving ? 'Saving…' : editingId ? 'Save changes' : 'Add to day'} onPress={save} disabled={!title.trim() || !dayDate || isSaving} full style={{ marginTop: spacing.sm }} />
+            {editingId && (
+              <Button label="Delete item" icon="trash-outline" variant="danger" onPress={askDelete} full style={{ marginTop: spacing.sm, marginBottom: spacing.xl }} />
+            )}
+            {!editingId && <View style={{ height: spacing.xl }} />}
           </ScrollView>
         </View>
       </Modal>

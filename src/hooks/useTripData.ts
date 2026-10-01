@@ -156,6 +156,14 @@ export function useAddItineraryItem(tripId: string) {
     onSuccess: () => qc.invalidateQueries({ queryKey: keys.itinerary(tripId) }),
   });
 }
+export function useUpdateItineraryItem(tripId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, ...fields }: { id: string } & Partial<Omit<ItineraryItem, 'id' | 'tripId' | 'sourceId'>>) =>
+      itineraryRepo.updateItineraryItem(id, fields),
+    onSuccess: () => qc.invalidateQueries({ queryKey: keys.itinerary(tripId) }),
+  });
+}
 export function useDeleteItineraryItem(tripId: string) {
   const qc = useQueryClient();
   return useMutation({

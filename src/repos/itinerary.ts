@@ -53,6 +53,19 @@ export async function addItineraryItem(input: Omit<ItineraryItem, 'id'>): Promis
   if (error) throw error;
 }
 
+export async function updateItineraryItem(id: string, input: Partial<Omit<ItineraryItem, 'id' | 'tripId' | 'sourceId'>>): Promise<void> {
+  const fields: Record<string, unknown> = {};
+  if (input.dayDate !== undefined) fields.day_date = input.dayDate;
+  if (input.time !== undefined) fields.time = input.time || null;
+  if (input.endTime !== undefined) fields.end_time = input.endTime || null;
+  if (input.title !== undefined) fields.title = input.title;
+  if (input.type !== undefined) fields.type = input.type;
+  if (input.location !== undefined) fields.location = input.location || null;
+  if (input.notes !== undefined) fields.notes = input.notes || null;
+  const { error } = await supabase.from('itinerary_items').update(fields).eq('id', id);
+  if (error) throw error;
+}
+
 export async function deleteItineraryItem(id: string): Promise<void> {
   const { error } = await supabase.from('itinerary_items').delete().eq('id', id);
   if (error) throw error;
