@@ -73,6 +73,17 @@ export function useAddExpense(tripId: string) {
     },
   });
 }
+export function useUpdateExpense(tripId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, ...fields }: { id: string } & Partial<Omit<Expense, 'id' | 'tripId' | 'sourceId'>>) =>
+      expensesRepo.updateExpense(id, fields),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: keys.expenses(tripId) });
+      qc.invalidateQueries({ queryKey: keys.allExpenses });
+    },
+  });
+}
 export function useDeleteExpense(tripId: string) {
   const qc = useQueryClient();
   return useMutation({

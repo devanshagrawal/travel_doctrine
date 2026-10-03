@@ -12,6 +12,7 @@ import {
   useMembers,
   useCashWallets,
   useAddExpense,
+  useUpdateExpense,
   useDeleteExpense,
   useLoadCash,
   useAdjustCash,
@@ -44,6 +45,7 @@ export default function Expenses() {
   const { data: collaborators = [] } = useMembers(id);
   const { data: cashWallets = [] } = useCashWallets(id);
   const addExpense = useAddExpense(id);
+  const updateExpense = useUpdateExpense(id);
   const deleteExpense = useDeleteExpense(id);
   const loadCash = useLoadCash(id);
   const adjustCash = useAdjustCash(id);
@@ -58,6 +60,7 @@ export default function Expenses() {
   const wallet = cashWallets.find((w) => w.tripId === id);
 
   const [adding, setAdding] = React.useState(false);
+  const [editingId, setEditingId] = React.useState<string | null>(null);
   const [desc, setDesc] = React.useState('');
   const [amount, setAmount] = React.useState('');
   const [currency, setCurrency] = React.useState(trip?.baseCurrency || 'USD');
@@ -88,25 +91,58 @@ export default function Expenses() {
   const nameFor = (cid?: string) => crew.find((c) => c.id === cid)?.name ?? 'Me';
 
   const openAdd = () => {
+    setEditingId(null);
     setPaidById(me?.id);
     setSplitOn(false);
     setParticipants(crew.map((c) => c.id));
     setPaySource('regular');
     setAdding(true);
   };
+  const openEdit = (e: typeof list[number]) => {
+    setEditingId(e.id);
+    setDesc(e.description);
+    setAmount(String(e.amount));
+    setCurrency(e.currency);
+    setCategoryId(e.categoryId ?? null);
+    setPaidById(e.paidById ?? me?.id);
+    setSplitOn(e.splitType === 'equal' && !!e.splitWith?.length);
+    setParticipants(e.splitWith ?? crew.map((c) => c.id));
+    setPaySource(e.paidFrom ?? 'regular');
+    setReceiptUri(e.receiptUri);
+    setAdding(true);
+  };
   const toggleParticipant = (cid: string) =>
     setParticipants((p) => (p.includes(cid) ? p.filter((x) => x !== cid) : [...p, cid]));
 
-  const reset = () => { setDesc(''); setAmount(''); setCurrency(trip.baseCurrency); setCategoryId(null); setSplitOn(false); setPaySource('regular'); setReceiptUri(undefined); setAdding(false); };
+  const reset = () => { setDesc(''); setAmount(''); setCurrency(trip.baseCurrency); setCategoryId(null); setSplitOn(false); setPaySource('regular'); setReceiptUri(undefined); setEditingId(null); setAdding(false); };
   const pickReceipt = async (setter: (u: string) => void) => {
     const res = await pickFile();
     if (res) setter(res.uri);
   };
   const attachToRow = (expenseId: string) => pickReceipt((uri) => attachReceipt.mutate({ id: expenseId, uri }));
+  const isSaving = addExpense.isPending || updateExpense.isPending;
   const save = async () => {
-    if (!desc.trim() || !Number(amount) || addExpense.isPending) return;
+    if (!desc.trim() || !Number(amount) || isSaving) return;
     const amt = Number(amount);
     try {
+      if (editingId) {
+        const shared = splitOn && canSplit && participants.length > 0;
+        await updateExpense.mutateAsync({
+          id: editingId,
+          categoryId,
+          amount: amt,
+          currency,
+          description: desc.trim(),
+          paidBy: nameFor(paidById),
+          paidById: paidById ?? me?.id,
+          splitType: shared ? 'equal' : 'none',
+          splitWith: shared ? participants : undefined,
+          paidFrom: paySource,
+          receiptUri,
+        });
+        reset();
+        return;
+      }
       // Cash spend (Model A): draws the wallet, currency = wallet currency, not re-counted.
       if (paySource === 'cash' && wallet) {
         await addExpense.mutateAsync({ tripId: trip.id, categoryId, amount: amt, currency: wallet.currency, description: desc.trim(), spentAt: dayjs().format('YYYY-MM-DD'), paidBy: nameFor(me?.id), paidFrom: 'cash', receiptUri });
@@ -333,9 +369,14 @@ export default function Expenses() {
                     <Ionicons name="link" size={16} color={colors.textFaint} />
                   </Pressable>
                 ) : (
-                  <Pressable hitSlop={8} onPress={() => confirmDelete(e)} style={styles.deleteBtn}>
-                    <Ionicons name="trash-outline" size={18} color={colors.danger} />
-                  </Pressable>
+                  <>
+                    <Pressable hitSlop={8} onPress={() => openEdit(e)} style={styles.editBtn}>
+                      <Ionicons name="create-outline" size={18} color={colors.primary} />
+                    </Pressable>
+                    <Pressable hitSlop={8} onPress={() => confirmDelete(e)} style={styles.deleteBtn}>
+                      <Ionicons name="trash-outline" size={18} color={colors.danger} />
+                    </Pressable>
+                  </>
                 )}
               </View>
             );
@@ -357,7 +398,7 @@ export default function Expenses() {
         <Pressable style={styles.backdrop} onPress={reset} />
         <View style={styles.sheet}>
           <View style={styles.handle} />
-          <Text style={styles.sheetTitle}>Add expense</Text>
+          <Text style={styles.sheetTitle}>{editingId ? 'Edit expense' : 'Add expense'}</Text>
           <ScrollView keyboardShouldPersistTaps="handled">
             <Field label="Description" placeholder="e.g. Dinner at izakaya" value={desc} onChangeText={setDesc} />
             <View style={{ flexDirection: 'row', gap: spacing.md }}>
@@ -479,7 +520,7 @@ export default function Expenses() {
               </Pressable>
             )}
 
-            <Button label={addExpense.isPending ? 'Saving…' : 'Save expense'} onPress={save} disabled={!desc.trim() || !Number(amount) || addExpense.isPending || (paySource === 'cash' && !!wallet && Number(amount) > wallet.balance)} full style={{ marginTop: spacing.md, marginBottom: spacing.xl }} />
+            <Button label={isSaving ? 'Saving…' : editingId ? 'Save changes' : 'Save expense'} onPress={save} disabled={!desc.trim() || !Number(amount) || isSaving || (!editingId && paySource === 'cash' && !!wallet && Number(amount) > wallet.balance)} full style={{ marginTop: spacing.md, marginBottom: spacing.xl }} />
           </ScrollView>
         </View>
       </Modal>
@@ -587,6 +628,7 @@ const makeStyles = (colors: Palette) => StyleSheet.create({
   cashBalanceLabel: { fontSize: font.size.sm, fontWeight: font.weight.regular, color: colors.textMuted },
   cashEmpty: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: colors.surface, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border, borderStyle: 'dashed', paddingVertical: spacing.md, marginBottom: spacing.md },
   cashEmptyText: { fontSize: font.size.md, fontWeight: font.weight.semibold, color: colors.primary },
+  editBtn: { width: 32, height: 32, borderRadius: 16, backgroundColor: colors.primarySoft, alignItems: 'center', justifyContent: 'center', marginLeft: 4 },
   deleteBtn: { width: 32, height: 32, borderRadius: 16, backgroundColor: colors.dangerSoft, alignItems: 'center', justifyContent: 'center', marginLeft: 4 },
   linkedBtn: { width: 32, height: 32, borderRadius: 16, backgroundColor: colors.surfaceAlt, alignItems: 'center', justifyContent: 'center', marginLeft: 4 },
   fab: { position: 'absolute', right: spacing.lg, bottom: spacing.xl, width: 56, height: 56, borderRadius: 28, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center', ...shadow.floating },

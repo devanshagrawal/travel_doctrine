@@ -92,6 +92,34 @@ export async function addExpense(input: Omit<Expense, 'id'>): Promise<Expense> {
   return created;
 }
 
+export async function updateExpense(id: string, input: Partial<Omit<Expense, 'id' | 'tripId' | 'sourceId'>>): Promise<void> {
+  const row: Record<string, unknown> = {};
+  if (input.description !== undefined) row.description = input.description;
+  if (input.amount !== undefined) row.amount = input.amount;
+  if (input.currency !== undefined) row.currency = input.currency;
+  if (input.spentAt !== undefined) row.spent_at = input.spentAt;
+  if (input.categoryId !== undefined) row.category_id = input.categoryId;
+  if (input.paidBy !== undefined) row.paid_by = input.paidBy;
+  if (input.paidById !== undefined) row.paid_by_id = input.paidById;
+  if (input.splitType !== undefined) row.split_type = input.splitType;
+  if (input.paidFrom !== undefined) row.paid_from = input.paidFrom;
+  if (input.receiptUri !== undefined) {
+    row.receipt_uri = input.receiptUri ? await ensureRemote(input.receiptUri, 'documents') : null;
+  }
+  const { error } = await supabase.from('expenses').update(row).eq('id', id);
+  if (error) throw error;
+
+  if (input.splitType !== undefined || input.splitWith !== undefined) {
+    await supabase.from('expense_splits').delete().eq('expense_id', id);
+    if (input.splitType === 'equal' && input.splitWith?.length) {
+      const { error: sErr } = await supabase
+        .from('expense_splits')
+        .insert(input.splitWith.map((memberId) => ({ expense_id: id, member_id: memberId })));
+      if (sErr) throw sErr;
+    }
+  }
+}
+
 export async function deleteExpense(id: string): Promise<void> {
   // expense_splits rows cascade via the FK on delete.
   const { error } = await supabase.from('expenses').delete().eq('id', id);
