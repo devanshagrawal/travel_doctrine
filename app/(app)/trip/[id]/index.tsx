@@ -85,7 +85,7 @@ export default function TripOverview() {
         <TripCover color={trip.coverColor} emoji={trip.emoji} image={trip.coverImage} height={230} radiusTop={false}>
           <SafeAreaView edges={['top']} style={StyleSheet.absoluteFill}>
             <View style={styles.coverBar}>
-              <Pressable style={styles.backBtn} onPress={() => router.back()}>
+              <Pressable style={styles.backBtn} onPress={() => router.canGoBack() ? router.back() : router.replace('/(app)/(tabs)')}>
                 <Ionicons name="chevron-back" size={22} color={colors.white} />
               </Pressable>
               <View style={{ flexDirection: 'row', gap: 8 }}>
