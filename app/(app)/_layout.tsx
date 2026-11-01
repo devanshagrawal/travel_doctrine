@@ -1,17 +1,28 @@
-import { Redirect, Stack } from 'expo-router';
-import { View, ActivityIndicator } from 'react-native';
+import { Redirect, Stack, useRouter } from 'expo-router';
+import { View, ActivityIndicator, Pressable } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../src/lib/auth';
 import { useRealtimeSync } from '../../src/hooks/useRealtimeSync';
 import { usePendingJoin } from '../../src/hooks/usePendingJoin';
 import { useRates } from '../../src/hooks/useRates';
 import { useTheme } from '../../src/theme/useTheme';
 
+function BackButton() {
+  const router = useRouter();
+  const { colors } = useTheme();
+  return (
+    <Pressable onPress={() => router.back()} hitSlop={8} style={{ marginRight: 8, padding: 4 }}>
+      <Ionicons name="chevron-back" size={24} color={colors.text} />
+    </Pressable>
+  );
+}
+
 export default function AppLayout() {
   const { session, loading } = useAuth();
   const { colors, fonts } = useTheme();
   useRealtimeSync(!!session);
   usePendingJoin(!!session);
-  useRates(); // seed cached FX rates + refresh live so all screens use current rates
+  useRates();
   if (loading) {
     return (
       <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.bg }}>
@@ -30,6 +41,7 @@ export default function AppLayout() {
         headerShadowVisible: false,
         headerTintColor: colors.text,
         headerTitleStyle: { fontFamily: fonts.serif, fontSize: 19, color: colors.text },
+        headerLeft: () => <BackButton />,
       }}
     >
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
@@ -46,6 +58,7 @@ export default function AppLayout() {
       <Stack.Screen name="trip/[id]/flights" options={{ headerShown: true, title: 'Flights' }} />
       <Stack.Screen name="trip/[id]/hotels" options={{ headerShown: true, title: 'Hotels' }} />
       <Stack.Screen name="trip/[id]/activities" options={{ headerShown: true, title: 'Activities' }} />
+      <Stack.Screen name="trip/[id]/map" options={{ headerShown: true, title: 'Map' }} />
     </Stack>
   );
 }

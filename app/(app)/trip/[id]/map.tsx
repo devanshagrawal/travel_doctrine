@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView, Pressable, Platform } from 'react-native';
-import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useTrip } from '../../../../src/hooks/useTrips';
 import { useHotels, useActivities, useItinerary } from '../../../../src/hooks/useTripData';
@@ -142,7 +142,6 @@ export default function MapView() {
 
   return (
     <View style={styles.container}>
-      <Stack.Screen options={{ title: 'Map', headerTintColor: colors.text, headerStyle: { backgroundColor: colors.surface } }} />
       <ScrollView contentContainerStyle={styles.scroll}>
         {points.length === 0 ? (
           <View style={styles.empty}>
